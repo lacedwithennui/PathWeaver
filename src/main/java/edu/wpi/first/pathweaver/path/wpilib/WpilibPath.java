@@ -39,6 +39,11 @@ public class WpilibPath extends Path {
                 for (Waypoint wp : c.getAddedSubList()) {
                     setupWaypoint(wp);
                     iconGroup.getChildren().add(wp.getIcon());
+                    iconGroup.getChildren().add(wp.getRobotOutline());
+                    wp.getIcon().toFront();
+                    wp.getRobotOutline().toFront();
+                    wp.getRobotOutline().getStyleClass().add("robotOutline");
+                    wp.getRobotOutline().setStrokeWidth(5 / field.getScale());
                     tangentGroup.getChildren().add(wp.getTangentLine());
                     if (wp != first) {
                         wp.reversedProperty().bindBidirectional(first.reversedProperty());
@@ -50,6 +55,7 @@ public class WpilibPath extends Path {
 
                 for (Waypoint wp : c.getRemoved()) {
                     iconGroup.getChildren().remove(wp.getIcon());
+                    iconGroup.getChildren().remove(wp.getRobotOutline());
                     tangentGroup.getChildren().remove(wp.getTangentLine());
                 }
             }

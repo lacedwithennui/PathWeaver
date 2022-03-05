@@ -15,6 +15,8 @@ import javafx.scene.shape.Rectangle;
 import javax.measure.Unit;
 import javax.measure.quantity.Length;
 
+import edu.wpi.first.math.util.Units;
+
 /**
  * The Waypoint class represents a point on the field. This class
  * follows WPILib convention, with X being the long side of the field,
@@ -35,9 +37,10 @@ public class Waypoint {
 	private final BooleanProperty reversed = new SimpleBooleanProperty();
 	private final StringProperty name = new SimpleStringProperty("");
 
+	private final ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
 	private final Line tangentLine;
 	private final Polygon icon;
-	private final Rectangle robotOutline;
+	private final Rectangle robotOutline = new Rectangle();
 
 	/**
 	 * Creates Waypoint object containing javafx circle.
@@ -57,8 +60,7 @@ public class Waypoint {
 
 		icon = new Polygon(0.0, SIZE / 3, SIZE, 0.0, 0.0, -SIZE / 3);
 		setupIcon();
-
-		ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
+		setupOutline();
 		tangentLine = new Line();
 		tangentLine.getStyleClass().add("tangent");
 		tangentLine.startXProperty().bind(x);
@@ -69,19 +71,6 @@ public class Waypoint {
 
 		//Convert from WPILib to JavaFX coords
 		tangentLine.endYProperty().bind(Bindings.createObjectBinding(() -> -getTangentY() + -getY(), tangentY, y));
-		
-		double robotWidth = values.getRobotWidth();
-		double robotLength = values.getRobotLength();
-		robotOutline = new Rectangle();
-		robotOutline.setHeight(robotWidth);
-		robotOutline.setWidth(robotLength);
-		robotOutline.xProperty().bind(x.subtract(robotLength / 2));
-		robotOutline.yProperty().bind(y.subtract(robotWidth / 2));
-		robotOutline.rotateProperty().bind(
-				Bindings.createObjectBinding(() ->
-						getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(getTangent().getY(), getTangent().getX())),
-						tangentX, tangentY));
-	
 	}
 
 	public void enableSubchildSelector(int i) {
@@ -93,15 +82,35 @@ public class Waypoint {
 		icon.setLayoutX(-(icon.getLayoutBounds().getMaxX() + icon.getLayoutBounds().getMinX()) / 2 - ICON_X_OFFSET);
 		icon.setLayoutY(-(icon.getLayoutBounds().getMaxY() + icon.getLayoutBounds().getMinY()) / 2);
 
+		// double robotWidth = values.getRobotWidth();
+		// double robotLength = values.getRobotLength();
+		// robotOutline.setHeight(robotWidth);
+		// robotOutline.setWidth(robotLength);
 		icon.translateXProperty().bind(x);
 		//Convert from WPILib to JavaFX coords
 		icon.translateYProperty().bind(y.negate());
 		FxUtils.applySubchildClasses(this.icon);
+		// FxUtils.applySubchildClasses(this.robotOutline);
 		this.icon.rotateProperty()
 				.bind(Bindings.createObjectBinding(
 						() -> getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-getTangentY(), getTangentX())),
 						tangentX, tangentY));
 		icon.getStyleClass().add("waypoint");
+	}
+
+	private void setupOutline() {
+		double robotWidth = values.getRobotWidth();
+		double robotLength = values.getRobotLength();
+		robotOutline.setHeight(robotWidth);
+		robotOutline.setWidth(robotLength);
+		robotOutline.translateXProperty().bind(x.subtract((robotLength/2)));
+		robotOutline.translateYProperty().bind(y.add((robotWidth/2)).negate());
+		FxUtils.applySubchildClasses(this.robotOutline);
+		robotOutline.rotateProperty().bind(
+				Bindings.createObjectBinding(() ->
+						getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-getTangentY(), getTangentX())),
+						tangentX, tangentY));
+		robotOutline.getStyleClass().add("robotOutline");
 	}
 
 	/**
