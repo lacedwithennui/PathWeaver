@@ -54,6 +54,10 @@ public class CreateProjectController {
 	@FXML
 	private TextField trackWidth;
 	@FXML
+	private TextField robotWidth;
+	@FXML
+	private TextField robotLength;
+	@FXML
 	private ChoiceBox<Game> game;
 	@FXML
 	private ChoiceBox<Unit<Length>> length;
@@ -70,16 +74,19 @@ public class CreateProjectController {
 	@FXML
 	private Label trackWidthLabel;
 	@FXML
+	private Label robotWidthLabel;
+	@FXML
+	private Label robotLengthLabel;
+	@FXML
 	private Label velocityUnits;
 	@FXML
 	private Label accelerationUnits;
 	@FXML
 	private Label trackWidthUnits;
-
+	@FXML
 	private boolean editing = false;
 
 	@FXML
-
 	private void initialize() {
 		ObservableList<TextField> numericFields = FXCollections.observableArrayList(maxVelocity,
 				maxAcceleration, trackWidth);
@@ -222,8 +229,10 @@ public class CreateProjectController {
 		double velocityMax = Double.parseDouble(maxVelocity.getText());
 		double accelerationMax = Double.parseDouble(maxAcceleration.getText());
 		double trackWidthDistance = Double.parseDouble(trackWidth.getText());
+		double robotWidthValue = Double.parseDouble(robotWidth.getText());
+		double robotLengthValue = Double.parseDouble(robotLength.getText());
 		ProjectPreferences.Values values = new ProjectPreferences.Values(lengthUnit, exportUnit, velocityMax,
-				accelerationMax, trackWidthDistance, game.getValue().getName(), outputPath);
+				accelerationMax, trackWidthDistance, robotWidthValue, robotLengthValue, game.getValue().getName(), outputPath);
 		ProjectPreferences prefs = ProjectPreferences.getInstance(directory.getAbsolutePath());
 		prefs.setValues(values);
 		editing = false;
@@ -270,6 +279,8 @@ public class CreateProjectController {
 		maxVelocity.setText(String.valueOf(values.getMaxVelocity()));
 		maxAcceleration.setText(String.valueOf(values.getMaxAcceleration()));
 		trackWidth.setText(String.valueOf(values.getTrackWidth()));
+		robotWidth.setText(String.valueOf(values.getRobotWidth()));
+		robotLength.setText(String.valueOf(values.getRobotLength()));
 		editing = true;
 	}
 }

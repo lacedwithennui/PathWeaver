@@ -103,7 +103,7 @@ public class ProjectPreferences {
 	}
 
 	private void setDefaults() {
-		values = new Values("FOOT", "Always Meters", 10.0, 60.0, 2.0, Game.INFINTE_RECHARGE_2020.getName(), null);
+		values = new Values("FOOT", "Always Meters", 10.0, 60.0, 2.0, 28.0, 38.0, Game.RAPID_REACT_2022.getName(), null);
 		updateValues();
 	}
 
@@ -242,6 +242,8 @@ public class ProjectPreferences {
 		private final double maxAcceleration;
 		@SerializedName(value = "trackWidth", alternate = "wheelBase")
 		private final double trackWidth;
+		private final double robotWidth;
+		private final double robotLength;
 		private String gameName;
 		private final String outputDir;
 
@@ -257,18 +259,24 @@ public class ProjectPreferences {
 		 * @param trackWidth
 		 *            The width between the center of each tire of the drivebase.  Even better would be a calculated
 		 *            track width from robot characterization.
+		 * @param robotWidth
+		 *             The total width of the robot in inches
+		 * @param robotLength
+		 *             The total length of the robot in inches
 		 * @param gameName
 		 *            The year/FRC game
 		 * @param outputDir
 		 *            The directory for the output files
 		 */
 		public Values(String lengthUnit, String exportUnit, double maxVelocity, double maxAcceleration,
-				double trackWidth, String gameName, String outputDir) {
+				double trackWidth, double robotWidth, double robotLength, String gameName, String outputDir) {
 			this.lengthUnit = lengthUnit;
 			this.exportUnit = exportUnit;
 			this.maxVelocity = maxVelocity;
 			this.maxAcceleration = maxAcceleration;
 			this.trackWidth = trackWidth;
+			this.robotWidth = robotWidth;
+			this.robotLength = robotLength;
 			this.gameName = gameName;
 			this.outputDir = outputDir;
 		}
@@ -291,6 +299,14 @@ public class ProjectPreferences {
 
 		public double getTrackWidth() {
 			return trackWidth;
+		}
+
+		public double getRobotWidth() {
+			return robotWidth;
+		}
+
+		public double getRobotLength() {
+			return robotLength;
 		}
 
 		public String getGameName() {

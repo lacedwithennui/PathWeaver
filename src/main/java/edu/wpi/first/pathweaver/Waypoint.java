@@ -37,6 +37,7 @@ public class Waypoint {
 
 	private final Line tangentLine;
 	private final Polygon icon;
+	private final Rectangle robotOutline;
 
 	/**
 	 * Creates Waypoint object containing javafx circle.
@@ -57,6 +58,7 @@ public class Waypoint {
 		icon = new Polygon(0.0, SIZE / 3, SIZE, 0.0, 0.0, -SIZE / 3);
 		setupIcon();
 
+		ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
 		tangentLine = new Line();
 		tangentLine.getStyleClass().add("tangent");
 		tangentLine.startXProperty().bind(x);
@@ -67,6 +69,19 @@ public class Waypoint {
 
 		//Convert from WPILib to JavaFX coords
 		tangentLine.endYProperty().bind(Bindings.createObjectBinding(() -> -getTangentY() + -getY(), tangentY, y));
+		
+		double robotWidth = values.getRobotWidth();
+		double robotLength = values.getRobotLength();
+		robotOutline = new Rectangle();
+		robotOutline.setHeight(robotWidth);
+		robotOutline.setWidth(robotLength);
+		robotOutline.xProperty().bind(x.subtract(robotLength / 2));
+		robotOutline.yProperty().bind(y.subtract(robotWidth / 2));
+		robotOutline.rotateProperty().bind(
+				Bindings.createObjectBinding(() ->
+						getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(getTangent().getY(), getTangent().getX())),
+						tangentX, tangentY));
+	
 	}
 
 	public void enableSubchildSelector(int i) {
@@ -157,6 +172,10 @@ public class Waypoint {
 
 	public Polygon getIcon() {
 		return icon;
+	}
+
+	public Rectangle getRobotOutline() {
+		return robotOutline;
 	}
 
 	public double getX() {
