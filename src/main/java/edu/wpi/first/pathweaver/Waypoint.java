@@ -1,8 +1,5 @@
 package edu.wpi.first.pathweaver;
 
-import java.util.Map;
-
-import edu.wpi.first.pathweaver.spline.Spline;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -11,281 +8,250 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Point2D;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.TransferMode;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
 
-@SuppressWarnings("PMD.TooManyMethods")
+import javax.measure.Unit;
+import javax.measure.quantity.Length;
+
+/**
+ * The Waypoint class represents a point on the field. This class
+ * follows WPILib convention, with X being the long side of the field,
+ * and Y being the short side.
+ *
+ * Viewed from the screen, Y should increase as one moves up the screen, and X
+ * should increase as one moves left.
+ */
 public class Waypoint {
-  private final DoubleProperty x = new SimpleDoubleProperty();
-  private final DoubleProperty y = new SimpleDoubleProperty();
-  private final DoubleProperty tangentX = new SimpleDoubleProperty();
-  private final DoubleProperty tangentY = new SimpleDoubleProperty();
-  private final BooleanProperty lockTangent = new SimpleBooleanProperty();
-  private final StringProperty name = new SimpleStringProperty("");
+	private static final double SIZE = 30.0;
+	private static final double ICON_X_OFFSET = (SIZE * 3D / 5D) / 16.5;
 
-  private Spline spline;
+	private final DoubleProperty x = new SimpleDoubleProperty();
+	private final DoubleProperty y = new SimpleDoubleProperty();
+	private final DoubleProperty tangentX = new SimpleDoubleProperty();
+	private final DoubleProperty tangentY = new SimpleDoubleProperty();
+	private final BooleanProperty lockTangent = new SimpleBooleanProperty();
+	private final BooleanProperty reversed = new SimpleBooleanProperty();
+	private final StringProperty name = new SimpleStringProperty("");
 
-  private Path path;
-  public static Waypoint currentWaypoint = null;
+	private final Line tangentLine;
+	private final Polygon icon;
 
-  private final Rectangle robotOutline;
-  private final Line tangentLine;
-  private Polygon icon;
+	/**
+	 * Creates Waypoint object containing javafx circle.
+	 *
+	 * @param position
+	 *            x and y coordinates in {@link Waypoint} convention
+	 * @param tangentVector
+	 *            tangent vector in user set units
+	 * @param fixedAngle
+	 *            If the angle the of the waypoint should be fixed. Used for first
+	 *            and last waypoint
+	 */
+	public Waypoint(Point2D position, Point2D tangentVector, boolean fixedAngle, boolean reverse) {
+		lockTangent.set(fixedAngle);
+		reversed.set(reverse);
+		setCoords(position);
 
-  private static final double SIZE = 30.0;
+		icon = new Polygon(0.0, SIZE / 3, SIZE, 0.0, 0.0, -SIZE / 3);
+		setupIcon();
 
-  public Path getPath() {
-    return path;
-  }
+		tangentLine = new Line();
+		tangentLine.getStyleClass().add("tangent");
+		tangentLine.startXProperty().bind(x);
+		//Convert from WPILib to JavaFX coords
+		tangentLine.startYProperty().bind(y.negate());
+		setTangent(tangentVector);
+		tangentLine.endXProperty().bind(Bindings.createObjectBinding(() -> getTangentX() + getX(), tangentX, x));
 
-  public void setPath(Path path) {
-    this.path = path;
-  }
+		//Convert from WPILib to JavaFX coords
+		tangentLine.endYProperty().bind(Bindings.createObjectBinding(() -> -getTangentY() + -getY(), tangentY, y));
+	}
 
-  /**
-   * Creates Waypoint object containing javafx circle.
-   *
-   * @param position      x and y coordinates in user set units
-   * @param tangentVector tangent vector in user set units
-   * @param fixedAngle    If the angle the of the waypoint should be fixed. Used for first and last waypoint
-   * @param myPath        the path this waypoint belongs to
-   */
-  @SuppressWarnings("PMD.NcssCount")
-  public Waypoint(Point2D position, Point2D tangentVector, boolean fixedAngle, Path myPath) {
-    path = myPath;
-    lockTangent.set(fixedAngle);
-    setX(position.getX());
-    setY(position.getY());
-    icon = new Polygon();
-    setupIcon();
-    x.addListener(listener -> update());
-    y.addListener(listener -> update());
+	public void enableSubchildSelector(int i) {
+		FxUtils.enableSubchildSelector(this.icon, i);
+		getIcon().applyCss();
+	}
 
-    ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
+	private void setupIcon() {
+		icon.setLayoutX(-(icon.getLayoutBounds().getMaxX() + icon.getLayoutBounds().getMinX()) / 2 - ICON_X_OFFSET);
+		icon.setLayoutY(-(icon.getLayoutBounds().getMaxY() + icon.getLayoutBounds().getMinY()) / 2);
 
-    tangentLine = new Line();
-    tangentLine.getStyleClass().add("tangent");
-    tangentLine.startXProperty().bind(x);
-    tangentLine.startYProperty().bind(y);
-    setTangent(tangentVector);
-    tangentLine.endXProperty().bind(Bindings.createObjectBinding(() -> getTangent().getX() + getX(), tangentX, x));
-    tangentLine.endYProperty().bind(Bindings.createObjectBinding(() -> getTangent().getY() + getY(), tangentY, y));
+		icon.translateXProperty().bind(x);
+		//Convert from WPILib to JavaFX coords
+		icon.translateYProperty().bind(y.negate());
+		FxUtils.applySubchildClasses(this.icon);
+		this.icon.rotateProperty()
+				.bind(Bindings.createObjectBinding(
+						() -> getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-getTangentY(), getTangentX())),
+						tangentX, tangentY));
+		icon.getStyleClass().add("waypoint");
+	}
 
-    double robotWidth = values.getRobotWidth();
-    double robotLength = values.getRobotLength();
+	/**
+	 * Convenience function for math purposes.
+	 *
+	 * @param other
+	 *            The other Waypoint.
+	 *
+	 * @return The coordinates of this Waypoint relative to the coordinates of
+	 *         another Waypoint.
+	 */
+	public Point2D relativeTo(Waypoint other) {
+		return new Point2D(this.getX() - other.getX(), this.getY() - other.getY());
+	}
 
-    robotOutline = new Rectangle();
-    robotOutline.setHeight(robotWidth);
-    robotOutline.setWidth(robotLength);
-    robotOutline.xProperty().bind(x.subtract(robotLength / 2));
-    robotOutline.yProperty().bind(y.subtract(robotWidth / 2));
-    robotOutline.rotateProperty().bind(
-            Bindings.createObjectBinding(() ->
-                    getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(getTangent().getY(), getTangent().getX())),
-                    tangentX, tangentY));
+	public boolean isLockTangent() {
+		return lockTangent.get();
+	}
 
-    this.spline = new NullSpline();
+	public BooleanProperty lockTangentProperty() {
+		return lockTangent;
+	}
 
-    setupDnd();
-  }
+	public void setLockTangent(boolean lockTangent) {
+		this.lockTangent.set(lockTangent);
+	}
 
-  /**
-   * Creates waypoint before a path is created. Call setPath() once path is created.
-   * @param position      x and y coordinates in user set units
-   * @param tangentVector tangent vector in user set units
-   * @param fixedAngle    If the angle the of the waypoint should be fixed. Used for first and last waypoint
-   */
-  public Waypoint(Point2D position, Point2D tangentVector, boolean fixedAngle) {
-    this(position, tangentVector, fixedAngle, null);
-  }
+	public boolean isReversed() {
+		return reversed.get();
+	}
 
+	public BooleanProperty reversedProperty() {
+		return reversed;
+	}
 
-  public void enableSubchildSelector(int i) {
-    FxUtils.enableSubchildSelector(this.icon, i);
-    getIcon().applyCss();
-  }
+	public void setReversed(boolean reversed) {
+		this.reversed.set(reversed);
+	}
 
-  private void setupIcon() {
-    icon = new Polygon(
-            0.0, SIZE / 3,
-            SIZE, 0.0,
-            0.0, -SIZE / 3);
-    double xOffset = (SIZE * 3D / 5D) / 16.5;
-    icon.setLayoutX(-(icon.getLayoutBounds().getMaxX() + icon.getLayoutBounds().getMinX()) / 2 - xOffset);
-    icon.setLayoutY(-(icon.getLayoutBounds().getMaxY() + icon.getLayoutBounds().getMinY()) / 2);
+	public Line getTangentLine() {
+		return tangentLine;
+	}
 
-    icon.translateXProperty().bind(x);
-    icon.translateYProperty().bind(y);
-    FxUtils.applySubchildClasses(this.icon);
-    this.icon.rotateProperty().bind(
-            Bindings.createObjectBinding(() ->
-                    getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(getTangent().getY(), getTangent().getX())),
-                    tangentX, tangentY));
-    icon.getStyleClass().add("waypoint");
-  }
+	public Point2D getTangent() {
+		return new Point2D(tangentX.get(), tangentY.get());
+	}
 
-  private void setupDnd() {
-    icon.setOnDragDetected(event -> {
-      currentWaypoint = this;
-      icon.startDragAndDrop(TransferMode.MOVE)
-          .setContent(Map.of(DataFormats.WAYPOINT, "point"));
-    });
-    tangentLine.setOnDragDetected(event -> {
-      currentWaypoint = this;
-      tangentLine.startDragAndDrop(TransferMode.MOVE)
-          .setContent(Map.of(DataFormats.CONTROL_VECTOR, "vector"));
-    });
-    tangentLine.setOnMouseClicked(this::resetOnDoubleClick);
-  }
+	public void setTangent(Point2D tangent) {
+		this.tangentX.set(tangent.getX());
+		this.tangentY.set(tangent.getY());
+	}
 
-  /**
-   * Handles reseting point depending on the mouse event.
-   *
-   * @param event The mouse event that was triggered
-   */
-  public void resetOnDoubleClick(MouseEvent event) {
-    if (event.getClickCount() == 2 && lockTangent.get()) {
-      lockTangent.set(false);
-      update();
-    }
-  }
+	public double getTangentX() {
+		return tangentX.get();
+	}
 
-  /**
-   * Updates the control points for the splines attached to this waypoint and to each of its neighbors.
-   */
-  public void update() {
-    if (this != path.getStart() && this != path.getEnd() && !isLockTangent()) {
-      path.updateTheta(this);
-    }
-    path.updateSplines();
-  }
+	public double getTangentY() {
+		return tangentY.get();
+	}
 
-  public jaci.pathfinder.Waypoint getPathfinderWaypoint() {
-    return new jaci.pathfinder.Waypoint(getX(), getY(), Math.atan2(getTangent().getY(), getTangent().getX()));
-  }
+	public void setTangentX(double tangentX) {
+		this.tangentX.set(tangentX);
+	}
 
-  /**
-   * Convenience function for math purposes.
-   *
-   * @param other The other Waypoint.
-   *
-   * @return The coordinates of this Waypoint relative to the coordinates of another Waypoint.
-   */
-  public Point2D relativeTo(Waypoint other) {
-    return new Point2D(this.getX() - other.getX(), this.getY() - other.getY());
-  }
+	public void setTangentY(double tangentY) {
+		this.tangentY.set(tangentY);
+	}
 
-  public boolean isLockTangent() {
-    return lockTangent.get();
-  }
+	public Polygon getIcon() {
+		return icon;
+	}
 
-  public BooleanProperty lockTangentProperty() {
-    return lockTangent;
-  }
+	public double getX() {
+		return x.get();
+	}
 
-  public Line getTangentLine() {
-    return tangentLine;
-  }
+	public DoubleProperty xProperty() {
+		return x;
+	}
 
-  public Point2D getTangent() {
-    return new Point2D(tangentX.get(), tangentY.get());
-  }
+	public void setX(double x) {
+		this.x.set(x);
+	}
 
-  public void setTangent(Point2D tangent) {
-    this.tangentX.set(tangent.getX());
-    this.tangentY.set(tangent.getY());
-  }
+	public double getY() {
+		return y.get();
+	}
 
-  public Rectangle getRobotOutline() {
-    return robotOutline;
-  }
+	public DoubleProperty yProperty() {
+		return y;
+	}
 
-  public Polygon getIcon() {
-    return icon;
-  }
+	public void setY(double y) {
+		this.y.set(y);
+	}
 
-  public double getX() {
-    return x.get();
-  }
+	public Point2D getCoords() {
+		return new Point2D(getX(), getY());
+	}
 
-  public DoubleProperty xProperty() {
-    return x;
-  }
+	public void setCoords(Point2D coords) {
+		setX(coords.getX());
+		setY(coords.getY());
+	}
 
-  public void setX(double x) {
-    this.x.set(x);
-  }
+	public String getName() {
+		return name.get();
+	}
 
-  public double getY() {
-    return y.get();
-  }
+	public StringProperty nameProperty() {
+		return name;
+	}
 
-  public DoubleProperty yProperty() {
-    return y;
-  }
+	public void setName(String name) {
+		this.name.set(name);
+	}
 
-  public void setY(double y) {
-    this.y.set(y);
-  }
+	public DoubleProperty tangentXProperty() {
+		return tangentX;
+	}
 
-  public Point2D getCoords() {
-    return new Point2D(getX(), getY());
-  }
+	public DoubleProperty tangentYProperty() {
+		return tangentY;
+	}
 
-  public void setSpline(Spline spline) {
-    this.spline = spline;
-  }
+	/**
+	 * Converts the unit system of a this Waypoint.
+	 *
+	 * @param from
+	 *            Unit to convert from.
+	 * @param to
+	 *            Unit to convert to.
+	 */
+	public void convertUnit(Unit<Length> from, Unit<Length> to) {
+		var converter = from.getConverterTo(to);
+		x.set(converter.convert(x.get()));
+		y.set(converter.convert(y.get()));
+		tangentX.set(converter.convert(tangentX.get()));
+		tangentY.set(converter.convert(tangentY.get()));
+	}
 
-  public Spline getSpline() {
-    return spline;
-  }
+	public Waypoint copy() {
+		return new Waypoint(getCoords(), getTangent(), isLockTangent(), isReversed());
+	}
 
-  public String getName() {
-    return name.get();
-  }
+	@Override
+	public String toString() {
+		return String.format("%s (%f,%f), (%f,%f), %b %b", getName(), getX(), getY(), getTangentX(), getTangentY(), isLockTangent(), isReversed());
+	}
 
-  public StringProperty nameProperty() {
-    return name;
-  }
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null) {
+			return false;
+		}
+		if (getClass() != o.getClass()) {
+			return false;
+		}
+		Waypoint point = (Waypoint) o;
 
-  /**
-   * Updates the Waypoint name and configures the icon tooltip.
-   * @param name New name of Waypoint.
-   */
-  public void setName(String name) {
-    this.name.set(name);
-  }
-
-  public DoubleProperty tangentXProperty() {
-    return tangentX;
-  }
-
-  public DoubleProperty tangentYProperty() {
-    return tangentY;
-  }
-
-  public Waypoint copy() {
-    return new Waypoint(getCoords(), getTangent(), isLockTangent());
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null) {
-      return false;
-    }
-    if (getClass() != o.getClass()) {
-      return false;
-    }
-    Waypoint point = (Waypoint) o;
-
-    return x.get() == point.x.get() && y.get() == point.y.get() && tangentX.get() == point.tangentX.get()
-        && tangentY.get() == point.tangentY.get() && name.get().equals(point.name.get())
-        && isLockTangent() == point.isLockTangent();
-  }
+		return x.get() == point.x.get() && y.get() == point.y.get() && tangentX.get() == point.tangentX.get()
+				&& tangentY.get() == point.tangentY.get() && name.get().equals(point.name.get())
+				&& isLockTangent() == point.isLockTangent() && isReversed() == point.isReversed();
+	}
 }

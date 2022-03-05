@@ -1,12 +1,13 @@
 package edu.wpi.first.pathweaver;
 
+import edu.wpi.first.pathweaver.path.Path;
+import edu.wpi.first.pathweaver.path.wpilib.WpilibPath;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
@@ -37,15 +38,15 @@ public final class PathIOUtil {
         BufferedWriter writer = Files.newBufferedWriter(Paths.get(fileLocation + path.getPathName()));
 
         CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT
-            .withHeader("X", "Y", "Tangent X", "Tangent Y", "Fixed Theta", "Name"))
+            .withHeader("X", "Y", "Tangent X", "Tangent Y", "Fixed Theta", "Reversed", "Name"))
     ) {
       for (Waypoint wp : path.getWaypoints()) {
         double xPos = wp.getX();
         double yPos = wp.getY();
-        double tangentX = wp.getTangent().getX();
-        double tangentY = wp.getTangent().getY();
+        double tangentX = wp.getTangentX();
+        double tangentY = wp.getTangentY();
         String name = wp.getName();
-        csvPrinter.printRecord(xPos, yPos, tangentX, tangentY, wp.isLockTangent(), name);
+        csvPrinter.printRecord(xPos, yPos, tangentX, tangentY, wp.isLockTangent(), wp.isReversed(), name);
       }
       csvPrinter.flush();
     } catch (IOException except) {
@@ -64,13 +65,11 @@ public final class PathIOUtil {
    * @return Path object saved in Path file
    */
   public static Path importPath(String fileLocation, String fileName) {
-    File file = new File(fileLocation + fileName);
-    try {
-      Reader reader = Files.newBufferedReader(file.toPath());
-      CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT
-              .withFirstRecordAsHeader()
-              .withIgnoreHeaderCase()
-              .withTrim());
+    try(Reader reader = Files.newBufferedReader(java.nio.file.Path.of(fileLocation, fileName));
+        CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT
+                .withFirstRecordAsHeader()
+                .withIgnoreHeaderCase()
+                .withTrim())) {
       ArrayList<Waypoint> waypoints = new ArrayList<>();
       for (CSVRecord csvRecord : csvParser) {
         Point2D position = new Point2D(
@@ -82,14 +81,15 @@ public final class PathIOUtil {
                 Double.parseDouble(csvRecord.get("Tangent Y"))
         );
         boolean locked = Boolean.parseBoolean(csvRecord.get("Fixed Theta"));
-        Waypoint point = new Waypoint(position, tangent, locked);
+        boolean reversed = Boolean.parseBoolean(csvRecord.get("Reversed"));
+        Waypoint point = new Waypoint(position, tangent, locked, reversed);
         if (csvRecord.isMapped("Name")) {
           String name = csvRecord.get("Name");
           point.setName(name);
         }
         waypoints.add(point);
       }
-      return new Path(waypoints, fileName);
+      return new WpilibPath(waypoints, fileName);
     } catch (IOException except) {
       LOGGER.log(Level.WARNING, "Could not read Path file", except);
       return null;

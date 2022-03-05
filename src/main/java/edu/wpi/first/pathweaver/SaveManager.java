@@ -3,17 +3,15 @@ package edu.wpi.first.pathweaver;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+
+import edu.wpi.first.pathweaver.path.Path;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 
 public final class SaveManager {
-
-  private static SaveManager instance;
+  private static final SaveManager INSTANCE = new SaveManager();
 
   private final Set<Path> paths = new HashSet<>();
-
-  private SaveManager() {
-  }
 
   /**
    * Return the singleton instance of SaveManager. Tracks which files have been edited so the user can be prompted to
@@ -21,10 +19,7 @@ public final class SaveManager {
    * @return Singleton instance of SaveManager.
    */
   public static SaveManager getInstance() {
-    if (instance == null) {
-      instance = new SaveManager();
-    }
-    return instance;
+    return INSTANCE;
   }
 
   public void addChange(Path path) {
@@ -57,6 +52,7 @@ public final class SaveManager {
   public boolean promptSaveAll(boolean allowCancel) {
     for (Path path : paths) {
       Alert alert = new Alert(Alert.AlertType.NONE);
+      FxUtils.applyDarkMode(alert);
       alert.setTitle(path.getPathName() + " has been modified");
       alert.setContentText("Save " + path.getPathName() + "?");
       alert.getButtonTypes().addAll(ButtonType.YES, ButtonType.NO);
@@ -95,6 +91,14 @@ public final class SaveManager {
     if (remove) {
       paths.remove(path);
     }
+  }
+
+  /**
+   * Removes a saved path from the list of saved paths.
+   * @param path The Path to no longer save.
+   */
+  public void removeChange(Path path) {
+    paths.remove(path);
   }
 
 }

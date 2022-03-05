@@ -8,6 +8,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.cell.TextFieldTreeCell;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
@@ -37,7 +38,8 @@ public class PathCell extends TextFieldTreeCell<String> {
   /**
    * Creates PathCell, a TreeCell object that can be dragged and used as a drag target.
    *
-   * @param validDropTarget If this item should allow drag over and drag drop.
+   * @param validDropTarget if this item should allow drag over and drag drop.
+   * @param validation a bifunction that checks if renaming the cell is valid
    */
   public PathCell(boolean validDropTarget, BiFunction<String, String, Boolean> validation) {
     super();
@@ -105,6 +107,7 @@ public class PathCell extends TextFieldTreeCell<String> {
     } else {
       editing = false;
       Alert a = new Alert(Alert.AlertType.INFORMATION);
+      FxUtils.applyDarkMode(a);
       a.setTitle("");
       a.setHeaderText("The item could not be renamed.");
       String content = String.format("The name \"%s\" is already used in this location. \n"
@@ -150,6 +153,7 @@ public class PathCell extends TextFieldTreeCell<String> {
           return;
         }
         Dragboard db = cell.startDragAndDrop(TransferMode.COPY);
+        db.setDragView(new WritableImage(1, 1));
         ClipboardContent content = new ClipboardContent();
         content.putString(item.getValue());
         db.setContent(content);

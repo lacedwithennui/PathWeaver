@@ -3,11 +3,14 @@ package edu.wpi.first.pathweaver;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import javafx.scene.control.TreeItem;
 
@@ -38,14 +41,14 @@ public final class MainIOUtil {
    * Checks if a file exists with filename if so appends incremental value.
    *
    * @param directory The directory the file will be saved to
-   * @param filename  The preferred filename
+   * @param pathName The preferred filename
    * @param extension The file extension
    *
-   * @return
+   * @return the next valid filename for the path name
    */
-  public static String getValidFileName(String directory, String filename, String extension) {
+  public static String getValidFileName(String directory, String pathName, String extension) {
     // remove the _number following the file name
-    String nameNoVersion = filename.replaceFirst("_[0-9]+", "");
+    String nameNoVersion = pathName.replaceFirst("_[0-9]+", "");
     File file = new File(directory, nameNoVersion + extension);
     for (int num = 0; file.exists(); num++) {
       file = new File(directory, nameNoVersion + "_" + num + extension);
@@ -138,10 +141,8 @@ public final class MainIOUtil {
    * @param root     Auton treeItem to add new created items to.
    */
   public static void loadAuton(String location, String filename, TreeItem<String> root) {
-    BufferedReader reader;
     root.getChildren().clear();
-    try {
-      reader = new BufferedReader(new FileReader(location + filename));
+    try(BufferedReader reader = Files.newBufferedReader(Paths.get(location, filename))) {
       String line = reader.readLine();
       while (line != null) {
         addChild(root, line);
@@ -161,19 +162,35 @@ public final class MainIOUtil {
    * @param root     Auton treeItem to save
    */
   public static void saveAuton(String location, String filename, TreeItem<String> root) {
-    BufferedWriter writer;
-    try {
-      writer = new BufferedWriter(new FileWriter(location + filename));
+    try(BufferedWriter writer = Files.newBufferedWriter(Paths.get(location, filename))) {
       for (TreeItem<String> item : root.getChildren()) {
         writer.write(item.getValue());
         writer.newLine();
       }
-
-      writer.close();
     } catch (IOException e) {
       LOGGER.log(Level.WARNING, "Could not save auton file", e);
     }
   }
 
+  public static void copyGroupFiles(String autonDirectory, String groupDirectory) throws IOException {
+    File folder = new File(groupDirectory + "/");
+    File autonfolder = new File(autonDirectory);
+    if (folder.exists()) {
+      if (!autonfolder.exists()) {
+        autonfolder.mkdir();
+      }
+      try (Stream<Path> stream = Files.walk(folder.toPath(), 1)) {
+        stream.filter(Files::isRegularFile).forEach(
+                source -> copy(source, Paths.get(autonDirectory + source.getFileName())));
+      }
+    }
+  }
 
+  private static void copy(Path source, Path dest) {
+    try {
+        Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
+    } catch (IOException e) {
+        LOGGER.log(Level.WARNING, "Could not copy file", e);
+    }
+  }
 }

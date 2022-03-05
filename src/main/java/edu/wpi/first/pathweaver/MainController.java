@@ -1,19 +1,21 @@
 package edu.wpi.first.pathweaver;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import jaci.pathfinder.Pathfinder;
-import jaci.pathfinder.modifiers.TankModifier;
+import edu.wpi.first.pathweaver.global.CurrentSelections;
+import edu.wpi.first.pathweaver.path.Path;
+import edu.wpi.first.pathweaver.path.wpilib.WpilibPath;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -25,25 +27,28 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
-@SuppressWarnings("PMD.TooManyMethods")
+
 //With the creation of a project many of these functions should be moved out of here
 //Anything to do with the directory should be part of a Project object
 
+@SuppressWarnings({"PMD.UnusedPrivateMethod","PMD.AvoidFieldNameMatchingMethodName",
+  "PMD.GodClass", "PMD.TooManyFields"})
 public class MainController {
+  private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
+
   @FXML private TreeView<String> autons;
   @FXML private TreeView<String> paths;
-  @FXML private Pane pathDisplay;
-  // Variable is auto generated as Pane name + Controller
-  @FXML private PathDisplayController pathDisplayController; //NOPMD
+
+  @FXML private Pane fieldDisplay;
+  @FXML private FieldDisplayController fieldDisplayController;
 
   @FXML private GridPane editWaypoint;
-  // Variable is auto generated as Pane name + Controller
-  @FXML private EditWaypointController editWaypointController; //NOPMD
+  @FXML private EditWaypointController editWaypointController;
 
   private String directory = ProjectPreferences.getInstance().getDirectory();
   private final String pathDirectory = directory + "/Paths/";
-  private final String autonDirectory = directory + "/Autons/";
-  private final String outputDirectory = directory + "/output/";
+  private final String autonDirectory = directory + "/Autos/";
+  private final String groupDirectory = directory + "/Groups/"; // Legacy dir for backwards compatibility
   private final TreeItem<String> autonRoot = new TreeItem<>("Autons");
   private final TreeItem<String> pathRoot = new TreeItem<>("Paths");
 
@@ -58,13 +63,17 @@ public class MainController {
     setupDrag();
 
     setupTreeView(autons, autonRoot, FxUtils.menuItem("New Autonomous...", event -> createAuton()));
-
     setupTreeView(paths, pathRoot, FxUtils.menuItem("New Path...", event -> createPath()));
+
+    // Copying files from the old directory name to the new one to maintain backwards compatibility
+    try {
+      MainIOUtil.copyGroupFiles(autonDirectory, groupDirectory);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
 
     MainIOUtil.setupItemsInDirectory(pathDirectory, pathRoot);
     MainIOUtil.setupItemsInDirectory(autonDirectory, autonRoot);
-
-    pathDisplayController.setPathDirectory(pathDirectory);
 
     setupClickablePaths();
     setupClickableAutons();
@@ -74,11 +83,11 @@ public class MainController {
     paths.setEditable(true);
     setupEditable();
 
-    duplicate.disableProperty().bind(pathDisplayController.currentPathProperty().isNull());
-    flipHorizontal.disableProperty().bind(pathDisplayController.currentPathProperty().isNull());
-    flipVertical.disableProperty().bind(pathDisplayController.currentPathProperty().isNull());
+    duplicate.disableProperty().bind(CurrentSelections.curPathProperty().isNull());
+    flipHorizontal.disableProperty().bind(CurrentSelections.curPathProperty().isNull());
+    flipVertical.disableProperty().bind(CurrentSelections.curPathProperty().isNull());
 
-    editWaypointController.bindToWaypoint(pathDisplayController.selectedWaypointProperty(), pathDisplayController);
+    editWaypointController.bindToWaypoint(CurrentSelections.curWaypointProperty(), fieldDisplayController);
   }
 
   private void setupTreeView(TreeView<String> treeView, TreeItem<String> treeRoot, MenuItem newItem) {
@@ -89,7 +98,7 @@ public class MainController {
     treeView.setShowRoot(false); // Don't show the roots "Paths" and "Autons" - cleaner appearance
   }
 
-  @SuppressWarnings("PMD.NcssCount")
+
   private void setupEditable() {
     autons.setOnEditStart(event -> {
       if (event.getTreeItem().getParent() != autonRoot) {
@@ -114,8 +123,8 @@ public class MainController {
 
       saveAllAutons();
       loadAllAutons();
-      pathDisplayController.removeAllPath();
-      pathDisplayController.addPath(pathDirectory, event.getTreeItem());
+      fieldDisplayController.removeAllPath();
+      fieldDisplayController.addPath(pathDirectory, event.getTreeItem());
     });
   }
 
@@ -146,8 +155,33 @@ public class MainController {
   }
 
   @FXML
-  @SuppressWarnings("PMD.NcssCount")
+
   private void delete() {
+    if (selected == null) {
+      // have nothing selected
+      return;
+    }
+    TreeItem<String> root = getRoot(selected);
+    if (selected == root) {
+      // clicked impossible thing to delete
+      return;
+    }
+    if (autonRoot == root) {
+      return;
+    } else if (pathRoot == root && FxUtils.promptDelete(selected.getValue())) {
+      fieldDisplayController.removeAllPath();
+      SaveManager.getInstance().removeChange(CurrentSelections.curPathProperty().get());
+      MainIOUtil.deleteItem(pathDirectory, selected);
+      for (TreeItem<String> path : getAllInstances(selected)) {
+        removePath(path);
+      }
+      saveAllAutons();
+      loadAllAutons();
+    }
+  }
+
+  @FXML
+  private void deleteAuton() {
     if (selected == null) {
       // have nothing selected
       return;
@@ -165,15 +199,8 @@ public class MainController {
       } else {
         removePath(selected);
       }
-    } else if (pathRoot == root) {
-      for (TreeItem<String> path : getAllInstances(selected)) {
-        removePath(path);
-      }
-      if (FxUtils.promptDelete(selected.getValue())) {
-        MainIOUtil.deleteItem(pathDirectory, selected);
-      }
-      saveAllAutons();
-      loadAllAutons();
+    } else {
+      return;
     }
   }
 
@@ -226,16 +253,17 @@ public class MainController {
               return;
             }
             selected = newValue;
-            if (newValue != pathRoot) {
-              pathDisplayController.removeAllPath();
-              pathDisplayController.addPath(pathDirectory, newValue);
+            if (newValue != pathRoot && newValue != null) {
+              fieldDisplayController.removeAllPath();
+              fieldDisplayController.addPath(pathDirectory, newValue);
+              CurrentSelections.getCurPath().selectWaypoint(CurrentSelections.getCurPath().getStart());
             }
           }
         };
     paths.getSelectionModel().selectedItemProperty().addListener(selectionListener);
   }
 
-  @SuppressWarnings("PMD.NcssCount")
+
   private void setupClickableAutons() {
     ChangeListener<TreeItem<String>> selectionListener = new ChangeListener<>() {
       @Override
@@ -244,21 +272,15 @@ public class MainController {
         if (newValue == null) {
           return;
         }
-        if (!SaveManager.getInstance().promptSaveAll()) {
-          autons.getSelectionModel().selectedItemProperty().removeListener(this);
-          autons.getSelectionModel().select(oldValue);
-          autons.getSelectionModel().selectedItemProperty().addListener(this);
-          return;
-        }
         selected = newValue;
-        pathDisplayController.removeAllPath();
+        fieldDisplayController.removeAllPath();
         if (newValue != autonRoot) {
           if (newValue.getParent() == autonRoot) { //is an auton with children
             for (TreeItem<String> it : selected.getChildren()) {
-              pathDisplayController.addPath(pathDirectory, it).enableSubchildSelector(FxUtils.getItemIndex(it));
+              fieldDisplayController.addPath(pathDirectory, it).enableSubchildSelector(FxUtils.getItemIndex(it));
             }
           } else { //has no children so try to display path
-            Path path = pathDisplayController.addPath(pathDirectory, newValue);
+            Path path = fieldDisplayController.addPath(pathDirectory, newValue);
             if (FxUtils.isSubChild(autons, newValue)) {
               path.enableSubchildSelector(FxUtils.getItemIndex(newValue));
             }
@@ -279,7 +301,6 @@ public class MainController {
 
 
   private void setupDrag() {
-
     paths.setCellFactory(param -> new PathCell(false, this::validPathName));
     autons.setCellFactory(param -> new PathCell(true, this::validAutonName));
 
@@ -292,17 +313,17 @@ public class MainController {
 
   @FXML
   private void flipHorizontal() {
-    pathDisplayController.flip(true);
+    fieldDisplayController.flip(true);
   }
 
   @FXML
   private void flipVertical() {
-    pathDisplayController.flip(false);
+    fieldDisplayController.flip(false);
   }
 
   @FXML
   private void duplicate() {
-    Path newPath = pathDisplayController.duplicate(pathDirectory);
+    Path newPath = fieldDisplayController.duplicate(pathDirectory);
     TreeItem<String> stringTreeItem = MainIOUtil.addChild(pathRoot, newPath.getPathName());
     SaveManager.getInstance().saveChange(newPath);
     paths.getSelectionModel().select(stringTreeItem);
@@ -312,7 +333,9 @@ public class MainController {
   private void createPath() {
     String name = MainIOUtil.getValidFileName(pathDirectory, "Unnamed", ".path");
     MainIOUtil.addChild(pathRoot, name);
-    Path newPath = new Path(name);
+    Path newPath = new WpilibPath(name);
+    // The default path defaults to FEET
+    newPath.convertUnit(PathUnits.FOOT, ProjectPreferences.getInstance().getValues().getLengthUnit());
     SaveManager.getInstance().saveChange(newPath);
   }
 
@@ -324,33 +347,49 @@ public class MainController {
   }
 
   @FXML
+
   private void buildPaths() {
     if (!SaveManager.getInstance().promptSaveAll()) {
       return;
     }
-    new File(outputDirectory).mkdir();
+
+    java.nio.file.Path output = ProjectPreferences.getInstance().getOutputDir().toPath();
+    try {
+      Files.createDirectories(output);
+    } catch (IOException e) {
+      LOGGER.log(Level.WARNING, "Could not export to " + output, e);
+    }
     for (TreeItem<String> pathName : pathRoot.getChildren()) {
       Path path = PathIOUtil.importPath(pathDirectory, pathName.getValue());
-      TankModifier tank = path.getTankModifier();
-      Pathfinder.writeToCSV(new File(outputDirectory + path.getPathNameNoExtension() + "_left.csv"),
-          tank.getLeftTrajectory());
-      Pathfinder.writeToCSV(new File(outputDirectory + path.getPathNameNoExtension() + "_right.csv"),
-          tank.getRightTrajectory());
+
+      java.nio.file.Path pathNameFile = output.resolve(path.getPathNameNoExtension());
+
+      if(!path.getSpline().writeToFile(pathNameFile)) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        FxUtils.applyDarkMode(alert);
+        alert.setTitle("Path export failure!");
+        alert.setContentText("Could not export to: " + output.toAbsolutePath());
+      }
     }
+    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    FxUtils.applyDarkMode(alert);
+    alert.setTitle("Paths exported!");
+    alert.setContentText("Paths exported to: " + output.toAbsolutePath());
+
+    alert.show();
   }
 
   @FXML
   private void editProject() {
     try {
       Pane root = FXMLLoader.load(getClass().getResource("createProject.fxml"));
-      Scene scene = pathDisplay.getScene();
+      Scene scene = fieldDisplay.getScene();
       Stage primaryStage = (Stage) scene.getWindow();
       primaryStage.setMaximized(false);
       primaryStage.setResizable(false);
       scene.setRoot(root);
     } catch (IOException e) {
-      Logger log = Logger.getLogger(getClass().getName());
-      log.log(Level.WARNING, "Couldn't load create project screen", e);
+      LOGGER.log(Level.WARNING, "Couldn't load create project screen", e);
     }
   }
 

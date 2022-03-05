@@ -2,6 +2,7 @@ package edu.wpi.first.pathweaver;
 
 import java.util.List;
 
+import edu.wpi.first.pathweaver.global.CurrentSelections;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -12,6 +13,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
 import javafx.util.converter.NumberStringConverter;
 
+@SuppressWarnings("PMD.UnusedPrivateMethod")
 public class EditWaypointController {
   @FXML
   private TextField xPosition;
@@ -24,19 +26,18 @@ public class EditWaypointController {
   @FXML
   private CheckBox lockedTangent;
   @FXML
+  private CheckBox reverseSpline;
+  @FXML
   private TextField pointName;
 
   private List<Control> controls;
-
-  private List<TextField> textFields;
-
   private ChangeListener<String> nameListener;
 
   @FXML
   private void initialize() {
-    controls = List.of(xPosition, yPosition, tangentX, tangentY, lockedTangent, pointName);
+    controls = List.of(xPosition, yPosition, tangentX, tangentY, lockedTangent, pointName, reverseSpline);
     controls.forEach(control -> control.setDisable(true));
-    textFields = List.of(xPosition, yPosition, tangentX, tangentY);
+    List<TextField> textFields = List.of(xPosition, yPosition, tangentX, tangentY);
     textFields.forEach(textField -> textField.setTextFormatter(FxUtils.onlyDoubleText()));
   }
 
@@ -45,17 +46,20 @@ public class EditWaypointController {
    * @param wp The ObservableValue for the selected waypoint.
    * @param controller The PathDisplayController to check the bounds of new waypoint values.
    */
-  public void bindToWaypoint(ObservableValue<Waypoint> wp, PathDisplayController controller) {
+  public void bindToWaypoint(ObservableValue<Waypoint> wp, FieldDisplayController controller) {
+    double height = ProjectPreferences.getInstance().getField().getRealLength().getValue().doubleValue();
     // When changing X and Y values, verify points are within bounds
     xPosition.textProperty().addListener((observable, oldValue, newValue) -> {
       boolean validText = !("").equals(newValue) && !("").equals(yPosition.getText());
-      if (validText && !controller.checkBounds(Double.valueOf(newValue), Double.valueOf(yPosition.getText()))) {
+      if (validText && !controller.checkBounds(Double.parseDouble(newValue),
+              Double.parseDouble(yPosition.getText()) - height)) {
         xPosition.setText(oldValue);
       }
     });
     yPosition.textProperty().addListener((observable, oldValue, newValue) -> {
       boolean validText = !("").equals(newValue) && !("").equals(xPosition.getText());
-      if (validText && !controller.checkBounds(Double.valueOf(xPosition.getText()), Double.valueOf(newValue))) {
+      if (validText && !controller.checkBounds(Double.parseDouble(xPosition.getText()),
+              Double.parseDouble(newValue) - height)) {
         yPosition.setText(oldValue);
       }
     });
@@ -86,6 +90,23 @@ public class EditWaypointController {
     field.textProperty().bindBidirectional(doubleProperty, converter);
   }
 
+  private void yDoubleBinding(TextField field, DoubleProperty doubleProperty) {
+    NumberStringConverter converter = new NumberStringConverter() {
+      @Override
+      public Double fromString(String value) {
+        double height = ProjectPreferences.getInstance().getField().getRealLength().getValue().doubleValue();
+        return Double.parseDouble(value) - height;
+      }
+
+      @Override
+      public String toString(Number object){
+        double height = ProjectPreferences.getInstance().getField().getRealLength().getValue().doubleValue();
+        return String.format("%.3f", height + object.doubleValue());
+      }
+    };
+    field.textProperty().bindBidirectional(doubleProperty, converter);
+  }
+
   private void disableDoubleBinding(TextField field, DoubleProperty doubleProperty) {
     field.textProperty().unbindBidirectional(doubleProperty);
     field.setText("");
@@ -98,22 +119,25 @@ public class EditWaypointController {
     disableDoubleBinding(tangentX, oldValue.tangentXProperty());
     disableDoubleBinding(tangentY, oldValue.tangentYProperty());
     lockedTangent.selectedProperty().unbindBidirectional(oldValue.lockTangentProperty());
+    reverseSpline.selectedProperty().unbindBidirectional(oldValue.reversedProperty());
     lockedTangent.setSelected(false);
+    reverseSpline.setSelected(false);
     pointName.textProperty().removeListener(nameListener);
     pointName.setText("");
   }
 
   private void bind(Waypoint newValue) {
     controls.forEach(control -> control.setDisable(false));
-    if (newValue.getPath().getStart() == newValue || newValue.getPath().getEnd() == newValue) {
+
+    if (CurrentSelections.getCurPath().getStart() == newValue || CurrentSelections.getCurPath().getEnd() == newValue) {
       lockedTangent.setDisable(true);
       lockedTangent.setSelected(true);
     } else {
       lockedTangent.selectedProperty().bindBidirectional(newValue.lockTangentProperty());
     }
-    textFields.forEach(textField -> textField.setOnKeyTyped(event -> newValue.getPath().swapToPathfinderSplines()));
+    reverseSpline.selectedProperty().bindBidirectional(newValue.reversedProperty());
     enableDoubleBinding(xPosition, newValue.xProperty());
-    enableDoubleBinding(yPosition, newValue.yProperty());
+    yDoubleBinding(yPosition, newValue.yProperty());
     enableDoubleBinding(tangentX, newValue.tangentXProperty());
     enableDoubleBinding(tangentY, newValue.tangentYProperty());
     pointName.setText(newValue.getName());
@@ -124,18 +148,35 @@ public class EditWaypointController {
   private void enableSaving(ObservableValue<Waypoint> wp) {
     // Save values when out of focus
     List.of(xPosition, yPosition, tangentX, tangentY, pointName)
-        .forEach(textField -> textField.textProperty().addListener((observable, oldValue, newValue) -> {
-          if (!newValue.equals("") && wp.getValue() != null) {
-            SaveManager.getInstance().addChange(wp.getValue().getPath());
-          }
-        }));
+        .forEach(textField -> {
+          textField.setOnKeyReleased(event -> {
+            if (!textField.getText().equals("") && wp.getValue() != null) {
+              SaveManager.getInstance().addChange(CurrentSelections.getCurPath());
+              CurrentSelections.getCurPath().update();
+            }
+            event.consume();
+          });
+
+          textField.setOnMouseClicked(event -> {
+            if (!textField.getText().equals("") && wp.getValue() != null) {
+              SaveManager.getInstance().addChange(CurrentSelections.getCurPath());
+              CurrentSelections.getCurPath().update();
+            }
+          });
+        });
 
     lockedTangent.selectedProperty()
-        .addListener(listener -> {
-          if (wp.getValue() != null) {
-            SaveManager.getInstance().addChange(wp.getValue().getPath());
-          }
-        });
+            .addListener((listener, oldValue, newValue) -> {
+              if (wp.getValue().isLockTangent() != newValue) {
+                SaveManager.getInstance().addChange(CurrentSelections.getCurPath());
+              }
+            });
+    reverseSpline.selectedProperty()
+            .addListener((listener, oldValue, newValue) -> {
+              if (wp.getValue().isReversed() != newValue) {
+                SaveManager.getInstance().addChange(CurrentSelections.getCurPath());
+              }
+            });
   }
 
   private void lockTangentOnEdit() {

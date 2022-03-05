@@ -13,6 +13,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.MenuItem;
@@ -22,8 +23,8 @@ import javafx.scene.control.TreeView;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
-public final class FxUtils { // NOPMD util class name
-  private static final List<PseudoClass> SUBCHILD_SELECTORS; // NOPMD
+public final class FxUtils {
+  private static final List<PseudoClass> SUBCHILD_SELECTORS;
 
   static {
     PseudoClass[] selectors = new PseudoClass[8];
@@ -42,6 +43,8 @@ public final class FxUtils { // NOPMD util class name
    *
    * @param text         the text of the menu item
    * @param eventHandler the handler to call when the menu item is acted upon
+   *
+   * @return the created menu item
    */
   public static MenuItem menuItem(String text, EventHandler<ActionEvent> eventHandler) {
     MenuItem menuItem = new MenuItem(text);
@@ -133,7 +136,7 @@ public final class FxUtils { // NOPMD util class name
    * @return TextFormatter with only Numeric text.
    */
   public static TextFormatter<Object> onlyPositiveDoubleText() {
-    return textRestriction("^\\d+\\.?\\d*$");
+    return textRestriction("^\\d*\\.?\\d*$");
   }
 
   private static TextFormatter<Object> textRestriction(String regex) {
@@ -155,6 +158,7 @@ public final class FxUtils { // NOPMD util class name
    */
   public static boolean promptDelete(String value) {
     Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+    applyDarkMode(alert);
     alert.setTitle("Delete " + value + "?");
     alert.setHeaderText("Delete " + value + "?");
     alert.setContentText("Are you sure you want to delete: " + value + "?");
@@ -164,4 +168,12 @@ public final class FxUtils { // NOPMD util class name
     }
     return false;
   }
+
+  public static void applyDarkMode(Alert alert){
+    final boolean darkIsOn = PathWeaver.mainScene.getStylesheets().contains(FxUtils.class.getResource("dark.css").toExternalForm());
+    if(darkIsOn) {
+        DialogPane dp = alert.getDialogPane();
+        dp.getStylesheets().add(FxUtils.class.getResource("dark.css").toExternalForm());
+    }
+  } 
 }

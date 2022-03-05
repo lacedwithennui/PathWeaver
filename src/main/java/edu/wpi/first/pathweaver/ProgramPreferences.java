@@ -2,171 +2,189 @@ package edu.wpi.first.pathweaver;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
+import javafx.scene.control.Alert;
+import javafx.scene.layout.Region;
+import javafx.stage.Stage;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javafx.stage.Stage;
-
 public class ProgramPreferences {
-  private static ProgramPreferences instance;
-  private Values values;
+	private static final String FILE_NAME = "pathweaver.json";
+	private static final ProgramPreferences INSTANCE = new ProgramPreferences();
 
-  private final String directory;
-  private static final String FILENAME = "pathweaver.json";
+	private Values values;
+	private final String directory;
 
-  private ProgramPreferences() {
-    directory = System.getProperty("user.home") + "/PathWeaver/";
-    File folder = new File(directory);
-    if (!folder.exists()) {
-      folder.mkdir();
-    }
-    try {
-      BufferedReader prefs = new BufferedReader(new FileReader(directory + FILENAME));
-      Gson gson = new GsonBuilder().serializeNulls().create();
-      values = gson.fromJson(prefs, Values.class);
-    } catch (FileNotFoundException e) {
-      values = new Values();
-      updatePrefs();
-    }
-  }
+	private ProgramPreferences() {
+		directory = System.getProperty("user.home") + "/PathWeaver/";
 
-  /**
-   * Return the singleton instance of ProgramPreferences.
-   * @return Singleton instance of ProgramPreferences.
-   */
-  public static ProgramPreferences getInstance() {
-    if (instance == null) {
-      instance = new ProgramPreferences();
-    }
-    return instance;
-  }
+		try (BufferedReader prefs = Files.newBufferedReader(Paths.get(directory, FILE_NAME))) {
+			Gson gson = new GsonBuilder().serializeNulls().create();
+			values = gson.fromJson(prefs, Values.class);
+		} catch (IOException e) {
+			values = new Values();
+			updatePrefs();
+		} catch (JsonParseException e) {
+			Alert alert = new Alert(Alert.AlertType.ERROR);
+			FxUtils.applyDarkMode(alert);
+			alert.setTitle("Preferences import error");
+			alert.setContentText(
+					"Preferences have been reset due to file corruption. You may reimport your projects with the 'Import Project' button");
+			((Stage) alert.getDialogPane().getScene().getWindow()).setAlwaysOnTop(true);
+			alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
+			
+			alert.show();
 
-  private void updatePrefs() {
-    try {
-      Gson gson = new GsonBuilder().setPrettyPrinting().create();
-      FileWriter writer = new FileWriter(directory + FILENAME);
-      gson.toJson(values, writer);
-      writer.close();
-    } catch (IOException e) {
-      Logger log = Logger.getLogger(getClass().getName());
-      log.log(Level.WARNING, "couldn't update program preferences", e);
-    }
-  }
+			values = new Values();
+			updatePrefs();
+		}
+	}
 
-  /**
-   * Adds a project to the beginning of the list of recent projects.
-   * @param path Path to the project.
-   */
-  public void addProject(String path) {
-    values.addProject(path);
-    updatePrefs();
-  }
+	/**
+	 * Return the singleton instance of ProgramPreferences.
+	 *
+	 * @return Singleton instance of ProgramPreferences.
+	 */
+	public static ProgramPreferences getInstance() {
+		return INSTANCE;
+	}
 
-  /**
-   * Returns a list of paths of recent projects.
-   * @return List of paths of recent projects.
-   */
-  public List<String> getRecentProjects() {
-    return values.getRecentProjects();
-  }
+	private void updatePrefs() {
+		Path output = Paths.get(directory, FILE_NAME);
+		try {
+			Files.createDirectories(Paths.get(directory));
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-  /**
-   * Sets the size, position, and maximized values for the primaryStage based upon previous preferences.
-   * @param primaryStage The Stage to set the values for.
-   */
-  public void setSizeAndPosition(Stage primaryStage) {
-    if (values.getWidth() == 0 || values.getHeight() == 0 || values.getPosX() == 0 || values.getPosY() == 0) {
-      primaryStage.setWidth(1024);
-      primaryStage.setHeight(768);
-    } else {
-      primaryStage.setWidth(values.getWidth());
-      primaryStage.setHeight(values.getHeight());
-      primaryStage.setX(values.getPosX());
-      primaryStage.setY(values.getPosY());
-      primaryStage.setMaximized(values.isMaximized());
-    }
-  }
+			try (BufferedWriter writer = Files.newBufferedWriter(output)) {
+				gson.toJson(values, writer);
+			}
+		} catch (IOException e) {
+			Logger log = Logger.getLogger(getClass().getName());
+			log.log(Level.WARNING, "couldn't update program preferences", e);
+		}
+	}
 
-  /**
-   * Saves the current size, position and maximized values to preferences file.
-   * @param primaryStage The stage to save size, position, and maximized values for.
-   */
-  public void saveSizeAndPosition(Stage primaryStage) {
-    values.setSizeAndPosition(primaryStage.getWidth(), primaryStage.getHeight(), primaryStage.getX(),
-        primaryStage.getY(), primaryStage.isMaximized());
-    updatePrefs();
-  }
+	/**
+	 * Adds a project to the beginning of the list of recent projects.
+	 *
+	 * @param path
+	 *            Path to the project.
+	 */
+	public void addProject(String path) {
+		values.addProject(path);
+		updatePrefs();
+	}
 
-  public void removeProject(String folder) {
-    values.removeProject(folder);
-    updatePrefs();
-  }
+	/**
+	 * Returns a list of paths of recent projects.
+	 *
+	 * @return List of paths of recent projects.
+	 */
+	public List<String> getRecentProjects() {
+		return values.getRecentProjects();
+	}
 
-  private class Values {
-    private List<String> recentProjects;
-    private double width;
-    private double height;
-    private double posX;
-    private double posY;
-    private boolean maximized;
+	/**
+	 * Sets the size, position, and maximized values for the primaryStage based upon
+	 * previous preferences.
+	 *
+	 * @param primaryStage
+	 *            The Stage to set the values for.
+	 */
+	public void setSizeAndPosition(Stage primaryStage) {
+		if (values.getWidth() == 0 || values.getHeight() == 0 || values.getPosX() == 0 || values.getPosY() == 0) {
+			primaryStage.setWidth(1024);
+			primaryStage.setHeight(768);
+		} else {
+			primaryStage.setWidth(values.getWidth());
+			primaryStage.setHeight(values.getHeight());
+			primaryStage.setX(values.getPosX());
+			primaryStage.setY(values.getPosY());
+			primaryStage.setMaximized(values.isMaximized());
+		}
+	}
 
-    public List<String> getRecentProjects() {
-      if (recentProjects == null) {
-        recentProjects = new ArrayList<>();
-      }
-      return recentProjects;
-    }
+	/**
+	 * Saves the current size, position and maximized values to preferences file.
+	 *
+	 * @param primaryStage
+	 *            The stage to save size, position, and maximized values for.
+	 */
+	public void saveSizeAndPosition(Stage primaryStage) {
+		values.setSizeAndPosition(primaryStage.getWidth(), primaryStage.getHeight(), primaryStage.getX(),
+				primaryStage.getY(), primaryStage.isMaximized());
+		updatePrefs();
+	}
 
-    public double getWidth() {
-      return width;
-    }
+	public void removeProject(String folder) {
+		values.removeProject(folder);
+		updatePrefs();
+	}
 
-    public double getHeight() {
-      return height;
-    }
+	private class Values {
+		private List<String> recentProjects;
+		private double width;
+		private double height;
+		private double posX;
+		private double posY;
+		private boolean maximized;
 
-    public double getPosX() {
-      return posX;
-    }
+		public List<String> getRecentProjects() {
+			if (recentProjects == null) {
+				recentProjects = new ArrayList<>();
+			}
+			return recentProjects;
+		}
 
-    public double getPosY() {
-      return posY;
-    }
+		public double getWidth() {
+			return width;
+		}
 
-    public boolean isMaximized() {
-      return maximized;
-    }
+		public double getHeight() {
+			return height;
+		}
 
-    public Values() {
-    }
+		public double getPosX() {
+			return posX;
+		}
 
-    public void setSizeAndPosition(double width, double height, double posX, double posY, boolean maximized) {
-      this.width = width;
-      this.height = height;
-      this.posX = posX;
-      this.posY = posY;
-      this.maximized = maximized;
-    }
+		public double getPosY() {
+			return posY;
+		}
 
-    public void addProject(String path) {
-      if (recentProjects == null) {
-        recentProjects = new ArrayList<>();
-      }
-      recentProjects.remove(path);
-      recentProjects.add(0, path);
-    }
+		public boolean isMaximized() {
+			return maximized;
+		}
 
-    public void removeProject(String path) {
-      recentProjects.remove(path);
-    }
-  }
+		public Values() {
+		}
+
+		public void setSizeAndPosition(double width, double height, double posX, double posY, boolean maximized) {
+			this.width = width;
+			this.height = height;
+			this.posX = posX;
+			this.posY = posY;
+			this.maximized = maximized;
+		}
+
+		public void addProject(String path) {
+			if (recentProjects == null) {
+				recentProjects = new ArrayList<>();
+			}
+			recentProjects.remove(path);
+			recentProjects.add(0, path);
+		}
+
+		public void removeProject(String path) {
+			recentProjects.remove(path);
+		}
+	}
 }
