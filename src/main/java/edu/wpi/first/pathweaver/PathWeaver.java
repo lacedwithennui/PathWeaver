@@ -34,6 +34,7 @@ public class PathWeaver extends Application {
         e -> Platform.runLater(() -> primaryStage.setResizable(false)));
     primaryStage.setScene(this.mainScene);
     primaryStage.show();
+    primaryStage.setOnCloseRequest(event -> System.exit(0));
     Loggers.setupLoggers();
   }
 
