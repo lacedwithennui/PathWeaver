@@ -66,6 +66,21 @@
     -fx-stroke: "lightgray";
 }
 
+.redOutline {
+    -fx-fill: null;
+    -fx-stroke: #ED1C24;
+}
+
+.blueOutline {
+    -fx-fill: null;
+    -fx-stroke: #0066B3;
+}
+
+.greenOutline {
+    -fx-fill: null;
+    -fx-stroke: #0fb300;
+}
+
 .tank {
     -fx-opacity: 0.7;
 }

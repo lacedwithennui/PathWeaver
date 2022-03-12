@@ -33,18 +33,22 @@ public class WpilibPath extends Path {
 
     public WpilibPath(List<Waypoint> points, String name) {
         super(WpilibSpline::new, name);
+        iconGroup.getChildren().add(Waypoint.getSmallCircle());
+        iconGroup.getChildren().add(Waypoint.getBigCircle());
         this.waypoints.addListener((ListChangeListener<Waypoint>) c -> {
             Waypoint first = this.waypoints.get(0);
             while (c.next()) {
                 for (Waypoint wp : c.getAddedSubList()) {
                     setupWaypoint(wp);
                     iconGroup.getChildren().add(wp.getIcon());
-                    iconGroup.getChildren().add(wp.getRobotOutline());
-                    wp.getIcon().toFront();
-                    wp.getRobotOutline().toFront();
-                    wp.getRobotOutline().getStyleClass().add("robotOutline");
-                    wp.getRobotOutline().setStrokeWidth(5 / field.getScale());
+                    iconGroup.getChildren().add(wp.getRedRect());
+                    iconGroup.getChildren().add(wp.getBlueRect());
+                    wp.getRedRect().setStrokeWidth(5 / field.getScale());
+                    wp.getBlueRect().setStrokeWidth(5 / field.getScale());
                     tangentGroup.getChildren().add(wp.getTangentLine());
+                    tangentGroup.toFront();
+                    wp.getTangentLine().toFront();
+                    wp.getIcon().toFront();
                     if (wp != first) {
                         wp.reversedProperty().bindBidirectional(first.reversedProperty());
                     }
@@ -55,7 +59,8 @@ public class WpilibPath extends Path {
 
                 for (Waypoint wp : c.getRemoved()) {
                     iconGroup.getChildren().remove(wp.getIcon());
-                    iconGroup.getChildren().remove(wp.getRobotOutline());
+                    iconGroup.getChildren().remove(wp.getRedRect());
+                    iconGroup.getChildren().remove(wp.getBlueRect());
                     tangentGroup.getChildren().remove(wp.getTangentLine());
                 }
             }
