@@ -45,7 +45,6 @@ public class Waypoint {
 	private final Rectangle robotOutline = new Rectangle();
 	private final Rectangle redRect = new Rectangle();
 	private final Rectangle blueRect = new Rectangle();
-	private final Group rectGroup = new Group();
 	private static final Circle smallCircle = new Circle(8.32, 4.08, 2.54 - 0.556); // r = range minus distance from limelight to the front of the robot
 	private static final Circle bigCircle = new Circle(8.32, 4.08, 4.572 + 0.313); // r = range plus distance from limelight to the back of the robot
 
@@ -116,7 +115,6 @@ public class Waypoint {
 		FxUtils.applySubchildClasses(this.redRect);
 		FxUtils.applySubchildClasses(this.blueRect);
 		Rotate groupRotate = new Rotate(0, robotLength/2, robotWidth/2);
-		rectGroup.getChildren().addAll(redRect, blueRect);
 		groupRotate.angleProperty()
 				.bind(Bindings.createObjectBinding(
 						() -> getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-getTangentY(), getTangentX())),
