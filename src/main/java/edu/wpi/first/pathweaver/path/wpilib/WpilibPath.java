@@ -33,8 +33,6 @@ public class WpilibPath extends Path {
 
     public WpilibPath(List<Waypoint> points, String name) {
         super(WpilibSpline::new, name);
-        iconGroup.getChildren().add(Waypoint.getSmallCircle());
-        iconGroup.getChildren().add(Waypoint.getBigCircle());
         this.waypoints.addListener((ListChangeListener<Waypoint>) c -> {
             Waypoint first = this.waypoints.get(0);
             while (c.next()) {
@@ -43,6 +41,8 @@ public class WpilibPath extends Path {
                     iconGroup.getChildren().add(wp.getIcon());
                     iconGroup.getChildren().add(wp.getRedRect());
                     iconGroup.getChildren().add(wp.getBlueRect());
+                    iconGroup.getChildren().add(wp.getSmallCircle());
+                    iconGroup.getChildren().add(wp.getBigCircle());
                     wp.getRedRect().setStrokeWidth(5 / field.getScale());
                     wp.getBlueRect().setStrokeWidth(5 / field.getScale());
                     tangentGroup.getChildren().add(wp.getTangentLine());
@@ -61,6 +61,8 @@ public class WpilibPath extends Path {
                     iconGroup.getChildren().remove(wp.getIcon());
                     iconGroup.getChildren().remove(wp.getRedRect());
                     iconGroup.getChildren().remove(wp.getBlueRect());
+                    iconGroup.getChildren().remove(wp.getSmallCircle());
+                    iconGroup.getChildren().remove(wp.getBigCircle());
                     tangentGroup.getChildren().remove(wp.getTangentLine());
                 }
             }

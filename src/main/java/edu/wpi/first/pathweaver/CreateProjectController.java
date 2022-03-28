@@ -20,6 +20,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Tooltip;
 import javafx.stage.DirectoryChooser;
 import javafx.util.StringConverter;
@@ -58,6 +59,14 @@ public class CreateProjectController {
 	@FXML
 	private TextField robotLength;
 	@FXML
+	private TextField smallRange;
+	@FXML
+	private TextField largeRange;
+	@FXML
+	private CheckBox smallRangeEnabled = new CheckBox();
+	@FXML
+	private CheckBox largeRangeEnabled = new CheckBox();
+	@FXML
 	private ChoiceBox<Game> game;
 	@FXML
 	private ChoiceBox<Unit<Length>> length;
@@ -77,6 +86,10 @@ public class CreateProjectController {
 	private Label robotWidthLabel;
 	@FXML
 	private Label robotLengthLabel;
+	@FXML
+	private Label smallRangeLabel;
+	@FXML
+	private Label largeRangeLabel;
 	@FXML
 	private Label velocityUnits;
 	@FXML
@@ -204,6 +217,10 @@ public class CreateProjectController {
 		maxVelocity.setText("");
 		maxAcceleration.setText("");
 		trackWidth.setText("");
+		robotLength.setText("");
+		robotWidth.setText("");
+		smallRange.setText("");
+		largeRange.setText("");
 		editing = false;
 	}
 
@@ -231,8 +248,13 @@ public class CreateProjectController {
 		double trackWidthDistance = Double.parseDouble(trackWidth.getText());
 		double robotWidthValue = Double.parseDouble(robotWidth.getText());
 		double robotLengthValue = Double.parseDouble(robotLength.getText());
+		double smallRangeValue = Double.parseDouble(smallRange.getText());
+		double largeRangeValue = Double.parseDouble(largeRange.getText());
+		boolean smallRangeEnabledValue = smallRangeEnabled.isSelected();
+		boolean largeRangeEnabledValue = largeRangeEnabled.isSelected();
 		ProjectPreferences.Values values = new ProjectPreferences.Values(lengthUnit, exportUnit, velocityMax,
-				accelerationMax, trackWidthDistance, robotWidthValue, robotLengthValue, game.getValue().getName(), outputPath);
+				accelerationMax, trackWidthDistance, robotWidthValue, robotLengthValue, smallRangeValue, largeRangeValue, 
+				smallRangeEnabledValue, largeRangeEnabledValue, game.getValue().getName(), outputPath);
 		ProjectPreferences prefs = ProjectPreferences.getInstance(directory.getAbsolutePath());
 		prefs.setValues(values);
 		editing = false;
@@ -281,6 +303,10 @@ public class CreateProjectController {
 		trackWidth.setText(String.valueOf(values.getTrackWidth()));
 		robotWidth.setText(String.valueOf(values.getRobotWidth()));
 		robotLength.setText(String.valueOf(values.getRobotLength()));
+		smallRange.setText(String.valueOf(values.getSmallRange()));
+		largeRange.setText(String.valueOf(values.getLargeRange()));
+		smallRangeEnabled.setSelected(values.getSmallRangeEnabledState());
+		largeRangeEnabled.setSelected(values.getLargeRangeEnabledState());
 		editing = true;
 	}
 }

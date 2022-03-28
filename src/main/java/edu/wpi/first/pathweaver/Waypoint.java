@@ -39,14 +39,18 @@ public class Waypoint {
 	private final BooleanProperty reversed = new SimpleBooleanProperty();
 	private final StringProperty name = new SimpleStringProperty("");
 
-	private final ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
+	private static final ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
 	private final Line tangentLine;
 	private final Polygon icon;
 	private final Rectangle robotOutline = new Rectangle();
 	private final Rectangle redRect = new Rectangle();
 	private final Rectangle blueRect = new Rectangle();
-	private static final Circle smallCircle = new Circle(8.32, 4.08, 2.54 - 0.556); // r = range minus distance from limelight to the front of the robot
-	private static final Circle bigCircle = new Circle(8.32, 4.08, 4.572 + 0.313); // r = range plus distance from limelight to the back of the robot
+	// private static final Circle smallCircle = new Circle(8.32, 4.08, 2.54 - 0.556); // r = range minus distance from limelight to the front of the robot
+	// private static final Circle bigCircle = new Circle(8.32, 4.08, 4.572 + 0.313); // r = range plus distance from limelight to the back of the robot
+	private final Circle smallCircle = new Circle();
+	private final Circle bigCircle = new Circle();
+	// private static final Circle smallCircle = new Circle(8.32, 4.08, values.getSmallRange());
+	// private static final Circle bigCircle = new Circle(8.32, 4.08, values.getLargeRange());
 
 	/**
 	 * Creates Waypoint object containing javafx circle.
@@ -140,7 +144,13 @@ public class Waypoint {
 		robotOutline.getStyleClass().add("robotOutline");
 	}
 
-	public static void setupCircles() {
+	public void setupCircles() {
+		smallCircle.setCenterX(8.32);
+		bigCircle.setCenterX(8.32);
+		smallCircle.setCenterY(4.08);
+		bigCircle.setCenterY(4.08);
+		smallCircle.setRadius(values.getSmallRange());
+		bigCircle.setRadius(values.getLargeRange());
 		FxUtils.applySubchildClasses(smallCircle);
 		FxUtils.applySubchildClasses(bigCircle);
 		smallCircle.getStyleClass().add("greenOutline");
@@ -227,11 +237,11 @@ public class Waypoint {
 		return robotOutline;
 	}
 
-	public static Circle getSmallCircle() {
+	public Circle getSmallCircle() {
 		return smallCircle;
 	}
 
-	public static Circle getBigCircle() {
+	public Circle getBigCircle() {
 		return bigCircle;
 	}
 

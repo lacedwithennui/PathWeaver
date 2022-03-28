@@ -103,7 +103,7 @@ public class ProjectPreferences {
 	}
 
 	private void setDefaults() {
-		values = new Values("FOOT", "Always Meters", 10.0, 60.0, 2.0, 28.0, 38.0, Game.RAPID_REACT_2022.getName(), null);
+		values = new Values("FOOT", "Always Meters", 10.0, 60.0, 2.0, 28.0, 38.0, 0, 0, false, false, Game.RAPID_REACT_2022.getName(), null);
 		updateValues();
 	}
 
@@ -178,7 +178,7 @@ public class ProjectPreferences {
 	 */
 	public Field getField() {
 		if (values.getGameName() == null) {
-			values.gameName = Game.DEEP_SPACE_2019.getName();
+			values.gameName = Game.RAPID_REACT_2022.getName();
 		}
 		Game game = Game.fromPrettyName(values.gameName);
 		if (game == null) {
@@ -244,6 +244,10 @@ public class ProjectPreferences {
 		private final double trackWidth;
 		private final double robotWidth;
 		private final double robotLength;
+		private final double smallRange;
+		private final double largeRange;
+		private final boolean smallRangeEnabled;
+		private final boolean largeRangeEnabled;
 		private String gameName;
 		private final String outputDir;
 
@@ -263,13 +267,23 @@ public class ProjectPreferences {
 		 *             The total width of the robot in inches
 		 * @param robotLength
 		 *             The total length of the robot in inches
+		 * @param smallRange
+		 *			   The radius of the small circle
+		 * @param largeRange
+		 * 			   The radius of the large circle
+		 * @param smallRangeEnabled
+		 *			   Whether the small circle is showing
+		 * @param largeRangeEnabled
+		 * 			   Whether the large circle is showing
 		 * @param gameName
 		 *            The year/FRC game
 		 * @param outputDir
 		 *            The directory for the output files
 		 */
 		public Values(String lengthUnit, String exportUnit, double maxVelocity, double maxAcceleration,
-				double trackWidth, double robotWidth, double robotLength, String gameName, String outputDir) {
+				double trackWidth, double robotWidth, double robotLength, 
+				double smallRange, double largeRange, boolean smallRangeEnabled, boolean largeRangeEnabled, 
+				String gameName, String outputDir) {
 			this.lengthUnit = lengthUnit;
 			this.exportUnit = exportUnit;
 			this.maxVelocity = maxVelocity;
@@ -277,6 +291,10 @@ public class ProjectPreferences {
 			this.trackWidth = trackWidth;
 			this.robotWidth = robotWidth;
 			this.robotLength = robotLength;
+			this.smallRange = smallRange;
+			this.largeRange = largeRange;
+			this.smallRangeEnabled = smallRangeEnabled;
+			this.largeRangeEnabled = largeRangeEnabled;
 			this.gameName = gameName;
 			this.outputDir = outputDir;
 		}
@@ -307,6 +325,22 @@ public class ProjectPreferences {
 
 		public double getRobotLength() {
 			return robotLength;
+		}
+
+		public double getSmallRange() {
+			return smallRange;
+		}
+
+		public double getLargeRange() {
+			return largeRange;
+		}
+
+		public boolean getSmallRangeEnabledState() {
+			return smallRangeEnabled;
+		}
+
+		public boolean getLargeRangeEnabledState() {
+			return largeRangeEnabled;
 		}
 
 		public String getGameName() {

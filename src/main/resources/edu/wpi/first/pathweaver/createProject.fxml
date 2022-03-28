@@ -6,6 +6,7 @@
 <?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
@@ -24,9 +25,13 @@
          <columnConstraints>
             <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" minWidth="10.0"/>
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="38.0"/>
-            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0"/>
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0"/>
          </columnConstraints>
          <rowConstraints>
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
@@ -48,6 +53,8 @@
          <Label fx:id="trackWidthLabel" text="Track Width" GridPane.rowIndex="7"/>
          <Label fx:id="robotLengthLabel" text="Robot Width" GridPane.rowIndex="8" />
          <Label fx:id="robotLengthLabel" text="Robot Length" GridPane.rowIndex="9" />
+         <Label fx:id="smallRangeLabel" text="Small Circle Radius" GridPane.rowIndex="10" />
+         <Label fx:id="largeRangeLabel" text="Large Circle Radius" GridPane.rowIndex="11" />
          <TextField fx:id="directory" GridPane.columnIndex="1"/>
          <Button fx:id="browse" mnemonicParsing="false" onAction="#browseDirectory" text="Browse"
                  GridPane.columnIndex="2"/>
@@ -62,12 +69,16 @@
          <TextField fx:id="trackWidth" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
          <TextField fx:id="robotWidth" GridPane.columnIndex="1" GridPane.rowIndex="8" />
          <TextField fx:id="robotLength" GridPane.columnIndex="1" GridPane.rowIndex="9" />
+         <TextField fx:id="smallRange" GridPane.columnIndex="1" GridPane.rowIndex="10" />
+         <TextField fx:id="largeRange" GridPane.columnIndex="1" GridPane.rowIndex="11" />
          <Label fx:id="velocityUnits" GridPane.columnIndex="2" GridPane.rowIndex="5"/>
          <Label fx:id="accelerationUnits" GridPane.columnIndex="2" GridPane.rowIndex="6"/>
          <Label fx:id="trackWidthUnits" GridPane.columnIndex="2" GridPane.rowIndex="7"/>
          <Label fx:id="robotWidthLabel" text="Width of the robot (ft)" GridPane.columnIndex="2" GridPane.rowIndex="8" />
          <Label fx:id="robotLengthLabel" text="Length of the robot (ft)" GridPane.columnIndex="2" GridPane.rowIndex="9" />
-         <ButtonBar GridPane.columnIndex="2" GridPane.rowIndex="10">
+         <CheckBox fx:id="smallRangeEnabled" text="Enable small range circle?" GridPane.columnIndex="2" GridPane.rowIndex="10" />
+         <CheckBox fx:id="largeRangeEnabled" text="Enable large range circle?" GridPane.columnIndex="2" GridPane.rowIndex="11" />
+         <ButtonBar GridPane.columnIndex="2" GridPane.rowIndex="12">
             <buttons>
                <Button fx:id="cancel" mnemonicParsing="false" onAction="#cancel" text="Cancel"/>
                <Button fx:id="create" mnemonicParsing="false" onAction="#createProject" text="Create Project"/>
