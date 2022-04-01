@@ -8,14 +8,12 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Point2D;
-import javafx.geometry.Point3D;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.transform.Rotate;
-
 import javax.measure.Unit;
 import javax.measure.quantity.Length;
 
@@ -39,18 +37,15 @@ public class Waypoint {
 	private final BooleanProperty reversed = new SimpleBooleanProperty();
 	private final StringProperty name = new SimpleStringProperty("");
 
-	private static final ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
+	private static ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
 	private final Line tangentLine;
 	private final Polygon icon;
 	private final Rectangle robotOutline = new Rectangle();
-	private final Rectangle redRect = new Rectangle();
-	private final Rectangle blueRect = new Rectangle();
-	// private static final Circle smallCircle = new Circle(8.32, 4.08, 2.54 - 0.556); // r = range minus distance from limelight to the front of the robot
-	// private static final Circle bigCircle = new Circle(8.32, 4.08, 4.572 + 0.313); // r = range plus distance from limelight to the back of the robot
-	private final Circle smallCircle = new Circle();
-	private final Circle bigCircle = new Circle();
-	// private static final Circle smallCircle = new Circle(8.32, 4.08, values.getSmallRange());
-	// private static final Circle bigCircle = new Circle(8.32, 4.08, values.getLargeRange());
+	private static final Circle smallCircle = new Circle();
+	private static final Circle bigCircle = new Circle();
+	private static final Group outlineGroup = new Group(smallCircle, bigCircle);
+	// private static final Circle smallCircle = new Circle(8.32, 4.08, values.getSmallRange()); //1.984
+	// private static final Circle bigCircle = new Circle(8.32, 4.08, values.getLargeRange()); //4.885
 
 	/**
 	 * Creates Waypoint object containing javafx circle.
@@ -70,8 +65,7 @@ public class Waypoint {
 
 		icon = new Polygon(0.0, SIZE / 3, SIZE, 0.0, 0.0, -SIZE / 3);
 		setupIcon();
-		// setupOutline();
-		setupDualOutline();
+		setupOutline();
 		setupCircles();
 		tangentLine = new Line();
 		tangentLine.getStyleClass().add("tangent");
@@ -105,30 +99,6 @@ public class Waypoint {
 		icon.getStyleClass().add("waypoint");
 	}
 
-	private void setupDualOutline() {
-		double robotWidth = values.getRobotWidth();
-		double robotLength = values.getRobotLength();
-		redRect.setHeight(robotWidth);
-		redRect.setWidth(robotLength);
-		blueRect.setHeight(robotWidth/2);
-		blueRect.setWidth(robotLength);
-		redRect.translateXProperty().bind(x.subtract((robotLength/2)));
-		redRect.translateYProperty().bind(y.add((robotWidth/2)).negate());
-		blueRect.translateXProperty().bind(x.subtract((robotLength/2)));
-		blueRect.translateYProperty().bind(y.add((robotWidth/2)).negate());
-		FxUtils.applySubchildClasses(this.redRect);
-		FxUtils.applySubchildClasses(this.blueRect);
-		Rotate groupRotate = new Rotate(0, robotLength/2, robotWidth/2);
-		groupRotate.angleProperty()
-				.bind(Bindings.createObjectBinding(
-						() -> getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-getTangentY(), getTangentX())),
-						tangentX, tangentY));
-		redRect.getTransforms().add(groupRotate);
-		blueRect.getTransforms().add(groupRotate);
-		redRect.getStyleClass().add("redOutline");
-		blueRect.getStyleClass().add("blueOutline");
-	}
-
 	private void setupOutline() {
 		double robotWidth = values.getRobotWidth();
 		double robotLength = values.getRobotLength();
@@ -145,10 +115,14 @@ public class Waypoint {
 	}
 
 	public void setupCircles() {
-		smallCircle.setCenterX(8.32);
-		bigCircle.setCenterX(8.32);
-		smallCircle.setCenterY(4.08);
-		bigCircle.setCenterY(4.08);
+		smallCircle.setCenterX(
+				(Game.fromPrettyName(values.getGameName()).getField().getRealWidth().getValue().doubleValue())/2);
+		bigCircle.setCenterX(
+				(Game.fromPrettyName(values.getGameName()).getField().getRealWidth().getValue().doubleValue())/2);
+		smallCircle.setCenterY(
+				(Game.fromPrettyName(values.getGameName()).getField().getRealLength().getValue().doubleValue())/2);
+		bigCircle.setCenterY(
+				(Game.fromPrettyName(values.getGameName()).getField().getRealLength().getValue().doubleValue())/2);
 		smallCircle.setRadius(values.getSmallRange());
 		bigCircle.setRadius(values.getLargeRange());
 		FxUtils.applySubchildClasses(smallCircle);
@@ -161,6 +135,27 @@ public class Waypoint {
 		bigCircle.setStrokeWidth(5 / ProjectPreferences.getInstance().getField().getScale());
 		smallCircle.applyCss();
 		bigCircle.applyCss();
+	}
+
+	public static void updateValues(ProjectPreferences.Values newValues) {
+		values = newValues;
+	}
+
+	public void updateOutlines(Group outlineGroup) {
+		for(Node outline : outlineGroup.getChildren()) {
+			// if this is true, the outline is a circle.
+			if(outline.getStyleClass().contains("greenOutline")) {
+				// outline.setRadius(values.getSmallRange());
+				// outline.setRadius(values.getLargeRange());
+				System.out.println("Outline is a circle " + outline.toString());
+			}
+			if(outline.getStyleClass().contains("robotOutline")) {
+				// outline.getProperties().put("width", values.getRobotWidth());
+				// outline.getProperties().put("height", values.getRobotLength());
+				System.out.println("Outline is a rectangle " + outline.toString());
+				// System.out.println("RECT HEIGHT!!!! " + outline.getProperties().get("height"));
+			}
+		}
 	}
 
 	/**
@@ -233,28 +228,24 @@ public class Waypoint {
 		return icon;
 	}
 
+	public static Group getOulineGroup() {
+		return outlineGroup;
+	}
+
 	public Rectangle getRobotOutline() {
 		return robotOutline;
 	}
 
-	public Circle getSmallCircle() {
+	public static Circle getSmallCircle() {
 		return smallCircle;
 	}
 
-	public Circle getBigCircle() {
+	public static Circle getBigCircle() {
 		return bigCircle;
 	}
 
-	public Group getOutlines() {
-		return new Group(redRect, blueRect);
-	}
-
-	public Rectangle getRedRect() {
-		return redRect;
-	}
-
-	public Rectangle getBlueRect() {
-		return blueRect;
+	public Rectangle getOutline() {
+		return robotOutline;
 	}
 
 	public double getX() {

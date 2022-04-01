@@ -33,18 +33,20 @@ public class WpilibPath extends Path {
 
     public WpilibPath(List<Waypoint> points, String name) {
         super(WpilibSpline::new, name);
+        iconGroup.getChildren().add(Waypoint.getSmallCircle());
+        iconGroup.getChildren().add(Waypoint.getBigCircle());
+        // Waypoint.getOulineGroup().getChildren().add(Waypoint.getSmallCircle());
+        // Waypoint.getOulineGroup().getChildren().add(Waypoint.getBigCircle());
         this.waypoints.addListener((ListChangeListener<Waypoint>) c -> {
             Waypoint first = this.waypoints.get(0);
             while (c.next()) {
                 for (Waypoint wp : c.getAddedSubList()) {
                     setupWaypoint(wp);
                     iconGroup.getChildren().add(wp.getIcon());
-                    iconGroup.getChildren().add(wp.getRedRect());
-                    iconGroup.getChildren().add(wp.getBlueRect());
-                    iconGroup.getChildren().add(wp.getSmallCircle());
-                    iconGroup.getChildren().add(wp.getBigCircle());
-                    wp.getRedRect().setStrokeWidth(5 / field.getScale());
-                    wp.getBlueRect().setStrokeWidth(5 / field.getScale());
+                    iconGroup.getChildren().add(wp.getOutline());
+                    Waypoint.getOulineGroup().getChildren().add(wp.getOutline());
+                    // wp.updateOutlines(Waypoint.getOulineGroup());
+                    wp.getRobotOutline().setStrokeWidth(5 / field.getScale());
                     tangentGroup.getChildren().add(wp.getTangentLine());
                     tangentGroup.toFront();
                     wp.getTangentLine().toFront();
@@ -59,10 +61,9 @@ public class WpilibPath extends Path {
 
                 for (Waypoint wp : c.getRemoved()) {
                     iconGroup.getChildren().remove(wp.getIcon());
-                    iconGroup.getChildren().remove(wp.getRedRect());
-                    iconGroup.getChildren().remove(wp.getBlueRect());
-                    iconGroup.getChildren().remove(wp.getSmallCircle());
-                    iconGroup.getChildren().remove(wp.getBigCircle());
+                    iconGroup.getChildren().remove(wp.getOutline());
+                    iconGroup.getChildren().remove(Waypoint.getSmallCircle());
+                    iconGroup.getChildren().remove(Waypoint.getBigCircle());
                     tangentGroup.getChildren().remove(wp.getTangentLine());
                 }
             }
