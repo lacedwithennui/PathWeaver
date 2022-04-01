@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 public class WpilibPath extends Path {
     private final Group iconGroup = new Group();
     private final Group tangentGroup = new Group();
+    private final OutlineController outlineController = new OutlineController();
 
     /**
      * Path constructor based on a known list of points.
@@ -33,20 +34,19 @@ public class WpilibPath extends Path {
 
     public WpilibPath(List<Waypoint> points, String name) {
         super(WpilibSpline::new, name);
-        iconGroup.getChildren().add(Waypoint.getSmallCircle());
-        iconGroup.getChildren().add(Waypoint.getBigCircle());
-        // Waypoint.getOulineGroup().getChildren().add(Waypoint.getSmallCircle());
-        // Waypoint.getOulineGroup().getChildren().add(Waypoint.getBigCircle());
+        iconGroup.getChildren().add(OutlineController.getSmallCircle());
+        iconGroup.getChildren().add(OutlineController.getBigCircle());
         this.waypoints.addListener((ListChangeListener<Waypoint>) c -> {
             Waypoint first = this.waypoints.get(0);
             while (c.next()) {
                 for (Waypoint wp : c.getAddedSubList()) {
+                    outlineController.getWaypointList().add(wp);
                     setupWaypoint(wp);
                     iconGroup.getChildren().add(wp.getIcon());
-                    iconGroup.getChildren().add(wp.getOutline());
-                    Waypoint.getOulineGroup().getChildren().add(wp.getOutline());
+                    iconGroup.getChildren().add(outlineController.getOutline(wp));
+                    outlineController.getOutlineGroup().getChildren().add(wp.getOutline());
                     // wp.updateOutlines(Waypoint.getOulineGroup());
-                    wp.getRobotOutline().setStrokeWidth(5 / field.getScale());
+                    outlineController.getOutline(wp).setStrokeWidth(5 / field.getScale());
                     tangentGroup.getChildren().add(wp.getTangentLine());
                     tangentGroup.toFront();
                     wp.getTangentLine().toFront();
@@ -62,8 +62,8 @@ public class WpilibPath extends Path {
                 for (Waypoint wp : c.getRemoved()) {
                     iconGroup.getChildren().remove(wp.getIcon());
                     iconGroup.getChildren().remove(wp.getOutline());
-                    iconGroup.getChildren().remove(Waypoint.getSmallCircle());
-                    iconGroup.getChildren().remove(Waypoint.getBigCircle());
+                    iconGroup.getChildren().remove(OutlineController.getSmallCircle());
+                    iconGroup.getChildren().remove(OutlineController.getBigCircle());
                     tangentGroup.getChildren().remove(wp.getTangentLine());
                 }
             }
