@@ -8,13 +8,12 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Point2D;
-import javafx.scene.Group;
-import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
 import javax.measure.Unit;
 import javax.measure.quantity.Length;
+
 
 /**
  * The Waypoint class represents a point on the field. This class
@@ -32,17 +31,15 @@ public class Waypoint {
 	private final DoubleProperty y = new SimpleDoubleProperty();
 	private final DoubleProperty tangentX = new SimpleDoubleProperty();
 	private final DoubleProperty tangentY = new SimpleDoubleProperty();
-	private final BooleanProperty lockTangent = new SimpleBooleanProperty();
-	private final BooleanProperty reversed = new SimpleBooleanProperty();
+	private final BooleanProperty lockTangent = new SimpleBooleanProperty(false);
+	private final BooleanProperty reversed = new SimpleBooleanProperty(false);
 	private final StringProperty name = new SimpleStringProperty("");
-
-	private static ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
 	private final Line tangentLine;
 	private final Polygon icon;
 	private final RobotOutline robotOutline;
-	private static final Circle smallCircle = new Circle();
-	private static final Circle bigCircle = new Circle();
-	private static final Group outlineGroup = new Group(smallCircle, bigCircle);
+	// private static final Circle smallCircle = new Circle();
+	// private static final Circle bigCircle = new Circle();
+	// private static final Group outlineGroup = new Group(smallCircle, bigCircle);
 	// private static final Circle smallCircle = new Circle(8.32, 4.08, values.getSmallRange()); //1.984
 	// private static final Circle bigCircle = new Circle(8.32, 4.08, values.getLargeRange()); //4.885
 
@@ -65,7 +62,7 @@ public class Waypoint {
 		icon = new Polygon(0.0, SIZE / 3, SIZE, 0.0, 0.0, -SIZE / 3);
 		setupIcon();
 		robotOutline = new RobotOutline(this);
-		robotOutline.setupOutline();
+		// OutlineController.setupRobotOutline(robotOutline);
 		tangentLine = new Line();
 		tangentLine.getStyleClass().add("tangent");
 		tangentLine.startXProperty().bind(x);
@@ -98,34 +95,49 @@ public class Waypoint {
 		icon.getStyleClass().add("waypoint");
 	}
 
-	public class RobotOutline extends Rectangle {
+	public static class RobotOutline extends Rectangle {
         private Waypoint waypoint;
+		protected boolean setup = false;
+		protected boolean isInList = false;
 
         public RobotOutline(Waypoint waypoint) {
+			// super();
             this.waypoint = waypoint;
+			OutlineController.setupRobotOutline(this);
         }
 
-        public void setupOutline() {
-            double robotWidth = values.getRobotWidth();
-        	double robotLength = values.getRobotLength();
-        	setHeight(robotWidth);
-        	setWidth(robotLength);
-        	translateXProperty().bind(xProperty().subtract((robotLength/2)));
-        	translateYProperty().bind(yProperty().add((robotWidth/2)).negate());
-        	FxUtils.applySubchildClasses(this);
-        	rotateProperty()
-        			.bind(Bindings.createObjectBinding(
-        					() -> waypoint.getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-waypoint.getTangentY(), waypoint.getTangentX())),
-                            waypoint.tangentXProperty(), waypoint.tangentYProperty()));
-        	getStyleClass().add("robotOutline");
-        }
+        // public void setupOutline() {
+        //     double robotWidth = values.getRobotWidth();
+        // 	double robotLength = values.getRobotLength();
+        // 	setHeight(robotWidth);
+        // 	setWidth(robotLength);
+        // 	translateXProperty().bind(xProperty().subtract((robotLength/2)));
+        // 	translateYProperty().bind(yProperty().add((robotWidth/2)).negate());
+        // 	FxUtils.applySubchildClasses(this);
+        // 	rotateProperty()
+        // 			.bind(Bindings.createObjectBinding(
+        // 					() -> waypoint.getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-waypoint.getTangentY(), waypoint.getTangentX())),
+        //                     waypoint.tangentXProperty(), waypoint.tangentYProperty()));
+        // 	getStyleClass().add("robotOutline");
+        // }
 
         public Waypoint getWaypoint() {
             return waypoint;
         }
     }
 
-	public Rectangle getOutline() {
+	public RobotOutline getOutline() {
+		if(!robotOutline.setup) {
+			OutlineController.setupRobotOutline(this.robotOutline);
+			System.out.println("setting up outline before get.");
+		}
+		// else {
+			// String outlineLocation = new Point2D(
+            //             Double.parseDouble(String.format("%.3f", robotOutline.getX())),
+            //             Double.parseDouble(String.format("%.3f", robotOutline.getY()))
+            //         ).toString();
+		// 	System.out.println("outline at " + outlineLocation + " has already been set up");
+		// }
 		return this.robotOutline;
 	}
 
@@ -181,7 +193,12 @@ public class Waypoint {
 	}
 
 	public boolean isLockTangent() {
-		return lockTangent.get();
+		if(lockTangent.getValue() != null) {
+			return lockTangent.get();
+		}
+		else {
+			return false;
+		}
 	}
 
 	public BooleanProperty lockTangentProperty() {
@@ -193,7 +210,12 @@ public class Waypoint {
 	}
 
 	public boolean isReversed() {
-		return reversed.get();
+		if(reversed.getValue() != null) {
+			return reversed.get();
+		}
+		else {
+			return false;
+		}
 	}
 
 	public BooleanProperty reversedProperty() {

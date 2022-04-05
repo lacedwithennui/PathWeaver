@@ -119,7 +119,7 @@ public class ProjectPreferences {
 			Logger log = Logger.getLogger(getClass().getName());
 			log.log(Level.WARNING, "Couldn't update Project Preferences", e);
 		}
-		OutlineController.updateOutlines();
+		// OutlineController.updateOutlines();
 	}
 
 	/**
@@ -130,6 +130,7 @@ public class ProjectPreferences {
 	 */
 	public void setValues(Values values) {
 		this.values = values;
+		OutlineController.updateOutlines();
 		updateValues();
 	}
 

@@ -1,55 +1,20 @@
 package edu.wpi.first.pathweaver;
 
 import java.util.ArrayList;
+import edu.wpi.first.pathweaver.Waypoint.RobotOutline;
 import javafx.beans.binding.Bindings;
-import javafx.scene.Group;
+import javafx.geometry.Point2D;
 import javafx.scene.shape.Circle;
-import javafx.scene.shape.Rectangle;
 
 public class OutlineController {
-    private ArrayList<Rectangle> rectangleGroup = new ArrayList<Rectangle>();
-    private ArrayList<Waypoint> waypointGroup = new ArrayList<Waypoint>();
+    private static ArrayList<RobotOutline> outlineList = new ArrayList<RobotOutline>();
     private static final Circle smallCircle = new Circle();
     private static final Circle largeCircle = new Circle();
     private static ProjectPreferences.Values values = ProjectPreferences.getInstance().getValues();
-    private String lastGameName = values.getGameName();
+    private static String lastGameName = values.getGameName();
+    private static boolean circlesSetUp = false;
 
-    public OutlineController() {}
-
-    public OutlineController(ArrayList<Waypoint> waypointGroup) {
-        this.waypointGroup = waypointGroup;
-        setupCircles();
-        // setupRobotOutline();
-    }
-
-    // public class RobotOutline extends Rectangle {
-    //     private Waypoint waypoint;
-
-    //     public RobotOutline(Waypoint waypoint) {
-    //         this.waypoint = waypoint;
-    //     }
-
-    //     public void setupOutline() {
-    //         double robotWidth = values.getRobotWidth();
-    //     	double robotLength = values.getRobotLength();
-    //     	setHeight(robotWidth);
-    //     	setWidth(robotLength);
-    //     	translateXProperty().bind(xProperty().subtract((robotLength/2)));
-    //     	translateYProperty().bind(yProperty().add((robotWidth/2)).negate());
-    //     	FxUtils.applySubchildClasses(this);
-    //     	rotateProperty()
-    //     			.bind(Bindings.createObjectBinding(
-    //     					() -> waypoint.getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-waypoint.getTangentY(), waypoint.getTangentX())),
-    //                         waypoint.tangentXProperty(), waypoint.tangentYProperty()));
-    //     	getStyleClass().add("robotOutline");
-    //     }
-
-    //     public Waypoint getWaypoint() {
-    //         return waypoint;
-    //     }
-    // }
-
-    public void setupCircles() {
+    public static void setupCircles() {
 		smallCircle.setCenterX(
 				(Game.fromPrettyName(values.getGameName()).getField().getRealWidth().getValue().doubleValue())/2);
 		largeCircle.setCenterX(
@@ -70,87 +35,96 @@ public class OutlineController {
 		largeCircle.setStrokeWidth(5 / ProjectPreferences.getInstance().getField().getScale());
 		smallCircle.applyCss();
 		largeCircle.applyCss();
+        circlesSetUp = true;
 	}
 
-    // private void setupRobotOutline() {
-    //     double robotWidth = values.getRobotWidth();
-    //     double robotLength = values.getRobotLength();
-    //     for(int i = 0; i < waypointGroup.size(); i++) {
-    //         Waypoint waypoint = waypointGroup.get(i);
-    //         rectangleGroup.add(new Rectangle());
-    //         rectangleGroup.get(i).setHeight(robotWidth);
-    //         rectangleGroup.get(i).setWidth(robotLength);
-    //         rectangleGroup.get(i).translateXProperty().bind(waypoint.xProperty().subtract((robotLength/2)));
-    //         rectangleGroup.get(i).translateYProperty().bind(waypoint.yProperty().add((robotWidth/2)).negate());
-    //         FxUtils.applySubchildClasses(rectangleGroup.get(i));
-    //         rectangleGroup.get(i).rotateProperty()
-    //                 .bind(Bindings.createObjectBinding(
-    //                         () -> waypoint.getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-waypoint.getTangentY(), waypoint.getTangentX())),
-    //                         waypoint.tangentXProperty(), waypoint.tangentYProperty()));
-    //         rectangleGroup.get(i).getStyleClass().add("robotOutline");
-	//     }
-    // }
+    public static void setupRobotOutline(RobotOutline outline) {
+        double robotWidth = values.getRobotWidth();
+        double robotLength = values.getRobotLength();
+        outline.setHeight(robotWidth);
+        outline.setWidth(robotLength);
+        outline.xProperty().bind(outline.getWaypoint().xProperty().subtract((robotLength/2)));
+        outline.yProperty().bind(outline.getWaypoint().yProperty().add((robotWidth/2)).negate());
+        FxUtils.applySubchildClasses(outline);
+        outline.rotateProperty()
+                .bind(Bindings.createObjectBinding(
+                        () -> outline.getWaypoint().getTangent() == null ? 0.0
+                                : Math.toDegrees(
+                                        Math.atan2(-outline.getWaypoint().getTangentY(),
+                                                outline.getWaypoint().getTangentX())),
+                        outline.getWaypoint().tangentXProperty(), outline.getWaypoint().tangentYProperty()));
+        outline.setStrokeWidth(5 / ProjectPreferences.getInstance().getField().getScale());
+        outline.getStyleClass().add("robotOutline");
+        outlineList.forEach(
+            (o) -> {
+                Point2D point = new Point2D(o.getX(), o.getY());
+                Point2D otherPoint = new Point2D(outline.getX(), outline.getY());
+                if(point.equals(otherPoint)) {
+                    outline.isInList = true;
+                    System.out.println("the outline at (" + 
+                            String.format("%.3f", otherPoint.getX()) + " , " + 
+                            String.format("%.3f", otherPoint.getY()) +
+                            ") is already in the list at index " + outlineList.indexOf(o));
+                }
+            }
+        );
+        if(!outline.isInList) {
+            outlineList.add(outline);
+            outline.isInList = true;
+            System.out.println("successfully added outline to group at index " 
+                    + outlineList.indexOf(outline));
+        }
+        outline.setup = true;
+    }
+
+    public static boolean getOutlineSetup(RobotOutline outline) {
+        return outline.setup;
+    }
 
     public void updateValues(ProjectPreferences.Values newValues) {
 		values = newValues;
         updateOutlines();
 	}
 
-	public static void updateOutlines() {
-        double robotWidth = values.getRobotWidth();
-        double robotLength = values.getRobotLength();
-		// for(Rectangle rectangle : rectangleGroup) {
-		// 	rectangle.setHeight(robotWidth);
-        //     rectangle.setWidth(robotLength);
-        //     // TODO: check if these need changing
-        //     // rectangle.translateXProperty().bind(waypoint.xProperty().subtract((robotLength/2)));
-        //     // rectangle.translateYProperty().bind(waypoint.yProperty().add((robotWidth/2)).negate());
-		// }
-        // smallCircle.setRadius(values.getSmallRange());
-		// largeCircle.setRadius(values.getLargeRange());
-        // // If the game has changed, the field size may have too. Change the circle centers to the center of the new field.
-        // if(lastGameName != values.getGameName()) {
-        //     smallCircle.setCenterX(
-		// 		    (Game.fromPrettyName(values.getGameName()).getField().getRealWidth().getValue().doubleValue())/2);
-        //     largeCircle.setCenterX(
-        //             (Game.fromPrettyName(values.getGameName()).getField().getRealWidth().getValue().doubleValue())/2);
-        //     smallCircle.setCenterY(
-        //             (Game.fromPrettyName(values.getGameName()).getField().getRealLength().getValue().doubleValue())/2);
-        //     largeCircle.setCenterY(
-        //             (Game.fromPrettyName(values.getGameName()).getField().getRealLength().getValue().doubleValue())/2);
-        //     lastGameName = values.getGameName();
-        // }
-	}
-
-    public ArrayList<Waypoint> getWaypointList() {
-		return waypointGroup;
-	}
-
-    public Group getOutlineGroup() {
-        Group outlineGroup = new Group();
-        for (Rectangle rectangle : rectangleGroup) {
-            outlineGroup.getChildren().add(rectangle);
-        }
-        return outlineGroup;
+    public static boolean newPrefValues() {
+        ProjectPreferences.Values oldValues = values;
+        values = ProjectPreferences.getInstance().getValues();
+        return !(oldValues == values);
     }
 
-    public ArrayList<Rectangle> getOutlineList() {
-        return rectangleGroup;
+	public static void updateOutlines() {
+        newPrefValues();
+        smallCircle.setRadius(values.getSmallRange());
+		largeCircle.setRadius(values.getLargeRange());
+        // If the game has changed, the field size may have too. Change the circle centers to the center of the new field.
+        if(lastGameName != values.getGameName()) {
+            smallCircle.setCenterX(
+				    (Game.fromPrettyName(values.getGameName()).getField().getRealWidth().getValue().doubleValue())/2);
+            largeCircle.setCenterX(
+                    (Game.fromPrettyName(values.getGameName()).getField().getRealWidth().getValue().doubleValue())/2);
+            smallCircle.setCenterY(
+                    (Game.fromPrettyName(values.getGameName()).getField().getRealLength().getValue().doubleValue())/2);
+            largeCircle.setCenterY(
+                    (Game.fromPrettyName(values.getGameName()).getField().getRealLength().getValue().doubleValue())/2);
+            lastGameName = values.getGameName();
+        }
+	}
+
+    public static ArrayList<RobotOutline> getOutlineList() {
+        return outlineList;
     }
 
 	public static Circle getSmallCircle() {
+        if(!circlesSetUp) {
+            setupCircles();
+        }
 		return smallCircle;
 	}
 
 	public static Circle getBigCircle() {
+        if(!circlesSetUp) {
+            setupCircles();
+        }
 		return largeCircle;
 	}
-
-    public Rectangle getOutline(int index) {
-        return rectangleGroup.get(index);
-    }
-
-    public Rectangle getOutline(Waypoint wp) {
-        return wp.getOutline();
-    }
 }
