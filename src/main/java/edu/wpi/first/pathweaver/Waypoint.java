@@ -37,11 +37,6 @@ public class Waypoint {
 	private final Line tangentLine;
 	private final Polygon icon;
 	private final RobotOutline robotOutline;
-	// private static final Circle smallCircle = new Circle();
-	// private static final Circle bigCircle = new Circle();
-	// private static final Group outlineGroup = new Group(smallCircle, bigCircle);
-	// private static final Circle smallCircle = new Circle(8.32, 4.08, values.getSmallRange()); //1.984
-	// private static final Circle bigCircle = new Circle(8.32, 4.08, values.getLargeRange()); //4.885
 
 	/**
 	 * Creates Waypoint object containing javafx circle.
@@ -62,7 +57,6 @@ public class Waypoint {
 		icon = new Polygon(0.0, SIZE / 3, SIZE, 0.0, 0.0, -SIZE / 3);
 		setupIcon();
 		robotOutline = new RobotOutline(this);
-		// OutlineController.setupRobotOutline(robotOutline);
 		tangentLine = new Line();
 		tangentLine.getStyleClass().add("tangent");
 		tangentLine.startXProperty().bind(x);
@@ -95,89 +89,24 @@ public class Waypoint {
 		icon.getStyleClass().add("waypoint");
 	}
 
+	/**
+	 * A Rectangle that wraps {@code this} {@link Waypoint}. This allows {@link OutlineUtil}
+	 * to use waypoint properties on setup.
+	 */
 	public static class RobotOutline extends Rectangle {
         private Waypoint waypoint;
 		protected boolean setup = false;
 		protected boolean isInList = false;
 
         public RobotOutline(Waypoint waypoint) {
-			// super();
             this.waypoint = waypoint;
-			OutlineController.setupRobotOutline(this);
+			OutlineUtil.setupRobotOutline(this);
         }
-
-        // public void setupOutline() {
-        //     double robotWidth = values.getRobotWidth();
-        // 	double robotLength = values.getRobotLength();
-        // 	setHeight(robotWidth);
-        // 	setWidth(robotLength);
-        // 	translateXProperty().bind(xProperty().subtract((robotLength/2)));
-        // 	translateYProperty().bind(yProperty().add((robotWidth/2)).negate());
-        // 	FxUtils.applySubchildClasses(this);
-        // 	rotateProperty()
-        // 			.bind(Bindings.createObjectBinding(
-        // 					() -> waypoint.getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-waypoint.getTangentY(), waypoint.getTangentX())),
-        //                     waypoint.tangentXProperty(), waypoint.tangentYProperty()));
-        // 	getStyleClass().add("robotOutline");
-        // }
 
         public Waypoint getWaypoint() {
             return waypoint;
         }
     }
-
-	public RobotOutline getOutline() {
-		if(!robotOutline.setup) {
-			OutlineController.setupRobotOutline(this.robotOutline);
-			System.out.println("setting up outline before get.");
-		}
-		// else {
-			// String outlineLocation = new Point2D(
-            //             Double.parseDouble(String.format("%.3f", robotOutline.getX())),
-            //             Double.parseDouble(String.format("%.3f", robotOutline.getY()))
-            //         ).toString();
-		// 	System.out.println("outline at " + outlineLocation + " has already been set up");
-		// }
-		return this.robotOutline;
-	}
-
-	// private void setupOutline() {
-	// 	double robotWidth = values.getRobotWidth();
-	// 	double robotLength = values.getRobotLength();
-	// 	robotOutline.setHeight(robotWidth);
-	// 	robotOutline.setWidth(robotLength);
-	// 	robotOutline.translateXProperty().bind(x.subtract((robotLength/2)));
-	// 	robotOutline.translateYProperty().bind(y.add((robotWidth/2)).negate());
-	// 	FxUtils.applySubchildClasses(this.robotOutline);
-	// 	robotOutline.rotateProperty()
-	// 			.bind(Bindings.createObjectBinding(
-	// 					() -> getTangent() == null ? 0.0 : Math.toDegrees(Math.atan2(-getTangentY(), getTangentX())),
-	// 					tangentX, tangentY));
-	// 	robotOutline.getStyleClass().add("robotOutline");
-	// }
-
-	// public void setupCircles() {
-	// 	smallCircle.setCenterX(
-	// 			(Game.fromPrettyName(values.getGameName()).getField().getRealWidth().getValue().doubleValue())/2);
-	// 	bigCircle.setCenterX(
-	// 			(Game.fromPrettyName(values.getGameName()).getField().getRealWidth().getValue().doubleValue())/2);
-	// 	smallCircle.setCenterY(
-	// 			(Game.fromPrettyName(values.getGameName()).getField().getRealLength().getValue().doubleValue())/2);
-	// 	bigCircle.setCenterY(
-	// 			(Game.fromPrettyName(values.getGameName()).getField().getRealLength().getValue().doubleValue())/2);
-	// 	smallCircle.setRadius(values.getSmallRange());
-	// 	bigCircle.setRadius(values.getLargeRange());
-	// 	FxUtils.applySubchildClasses(smallCircle);
-	// 	FxUtils.applySubchildClasses(bigCircle);
-	// 	smallCircle.getStyleClass().add("greenOutline");
-	// 	bigCircle.getStyleClass().add("greenOutline");
-	// 	smallCircle.toFront();
-	// 	bigCircle.toFront();
-	// 	smallCircle.setStrokeWidth(5 / ProjectPreferences.getInstance().getField().getScale());
-	// 	bigCircle.setStrokeWidth(5 / ProjectPreferences.getInstance().getField().getScale());
-	// 	smallCircle.applyCss();
-	// 	bigCircle.applyCss();
-	// }
 
 	/**
 	 * Convenience function for math purposes.
@@ -257,6 +186,13 @@ public class Waypoint {
 
 	public Polygon getIcon() {
 		return icon;
+	}
+
+	public RobotOutline getOutline() {
+		if(!robotOutline.setup) {
+			OutlineUtil.setupRobotOutline(this.robotOutline);
+		}
+		return this.robotOutline;
 	}
 
 	public double getX() {

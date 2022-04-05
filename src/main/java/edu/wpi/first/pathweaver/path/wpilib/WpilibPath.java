@@ -34,10 +34,9 @@ public class WpilibPath extends Path {
 
     public WpilibPath(List<Waypoint> points, String name) {
         super(WpilibSpline::new, name);
-        iconGroup.getChildren().add(OutlineController.getSmallCircle());
-        iconGroup.getChildren().add(OutlineController.getBigCircle());
+        iconGroup.getChildren().add(OutlineUtil.getSmallCircle());
+        iconGroup.getChildren().add(OutlineUtil.getBigCircle());
         this.waypoints.addListener((ListChangeListener<Waypoint>) c -> {
-            OutlineController.getOutlineList().clear();
             Waypoint first = this.waypoints.get(0);
             while (c.next()) {
                 for (Waypoint wp : c.getAddedSubList()) {
@@ -60,8 +59,8 @@ public class WpilibPath extends Path {
                 for (Waypoint wp : c.getRemoved()) {
                     iconGroup.getChildren().remove(wp.getIcon());
                     iconGroup.getChildren().remove(wp.getOutline());
-                    iconGroup.getChildren().remove(OutlineController.getSmallCircle());
-                    iconGroup.getChildren().remove(OutlineController.getBigCircle());
+                    iconGroup.getChildren().remove(OutlineUtil.getSmallCircle());
+                    iconGroup.getChildren().remove(OutlineUtil.getBigCircle());
                     tangentGroup.getChildren().remove(wp.getTangentLine());
                 }
             }
